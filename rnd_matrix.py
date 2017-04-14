@@ -9,6 +9,31 @@ import numpy as np
 import networkx as nx
 from time import time
 
+from gurobipy import Model, GRB, quicksum
+
+def SolveCuttingPlane(h1, h2, M):
+    m = Model()
+    m.setParam(GRB.Param.TimeLimit, 300)
+    m.setParam(GRB.Param.Method, 1)
+    # Create variables
+    x = {}
+    n = len(h1)
+    for i in range(n):
+        for j in range(n):
+            x[i,j] = m.addVar(obj=M[i][j], name='x'+str(i)+'_'+str(j))
+    m.update()
+    
+    for i in range(n):
+        m.addConstr(quicksum(x[i,j] for j in range(n)) == h1[i])
+
+    for j in range(n):
+        m.addConstr(quicksum(x[i,j] for i in range(n)) == h2[j])
+
+    # Solve the model
+    m.optimize()
+    
+    return m.getAttr(GRB.Attr.ObjVal)
+
 def Wasserstein(h1, h2, M):
     """ Compute the Wasserstein distance between the two histograms 
         h1 and h2 using distance matrix M """
@@ -26,16 +51,16 @@ def Wasserstein(h1, h2, M):
             G.add_edge(i, d+j, weight=M[i][j], capacity=min(h1[i], h2[j]))
     
     #flowCost, flowDict = nx.capacity_scaling(G, heap=nx.utils.heaps.PairingHeap)
-    flowCost, flowDict = nx.capacity_scaling(G, heap=nx.utils.heaps.BinaryHeap)
+    flowCost, flowDict = nx.capacity_scaling(G, heap=nx.utils.heaps.BinaryHeap)     
     #flowCost, flowDict = nx.network_simplex(G)
     return flowCost
     
 def MakeHistogram(d):
     """ Make a normalized random histogram on the simplex """
     hist = np.random.permutation(range(d))
-    #hist = [np.random.uniform(0,1) for _ in range(d)]
-    #hsum = sum(hist)
-    #hist = [h/hsum for h in hist]
+    hist = [np.random.uniform(0,1) for _ in range(d)]
+    hsum = sum(hist)
+    hist = [h/hsum for h in hist]
     return hist
     
 def MakeCostMatrix(d):
@@ -53,13 +78,15 @@ def MakeCostMatrix(d):
 if __name__ == "__main__":
     start = time()
     # Random graph as in 
-    d = 128
+    d = 512
     M = MakeCostMatrix(d)
     print("Build matrix time: ", time()-start)
 
     # Create two random histograms of dimension d
     h1 = MakeHistogram(d)
     h2 = MakeHistogram(d)
-    
-    print(Wasserstein(h1, h2, M))
-    print("Total time: ", time()-start)
+
+    print(SolveCuttingPlane(h1, h2, M)) 
+    print("Gurobi time: ", time()-start)
+    #print(Wasserstein(h1, h2, M))
+    #print("Total time: ", time()-start)
