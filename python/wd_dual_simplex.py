@@ -40,13 +40,13 @@ def WassersteinDualSimplex(h1, h2, M):
 
     # Build model
     m = Model()
-    m.setParam(GRB.Param.TimeLimit, 300)
-    m.setParam(GRB.Param.Presolve,    0)    
+    #m.setParam(GRB.Param.TimeLimit, 300)
+    #m.setParam(GRB.Param.Presolve,    0)    
     #m.setParam(GRB.Param.Threads,     1)
     #  Options are: 
     #      -1=automatic, 0=primal simplex, 1=dual simplex, 2=barrier, 
     #                    3=concurrent, 4=deterministic concurrent.
-    m.setParam(GRB.Param.Method, 0)
+    #m.setParam(GRB.Param.Method, 0)
     print('1. Start building model')
     # Create variables
     x = {}            
@@ -89,5 +89,5 @@ if __name__ == "__main__":
     M1,M2 = Preprocessing(M1,M2)
 
 
-    C = ComputeDistanceMatrix(len(M1), p=2)
+    C = ComputeDistanceMatrix(len(M1), p=1)
     print(WassersteinDualSimplex(M1, M2, C))
