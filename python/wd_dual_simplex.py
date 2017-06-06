@@ -8,7 +8,7 @@ Created on Thu May  4 10:45:47 2017
 import numpy as np
 from gurobipy import Model, GRB, quicksum, tuplelist
 
-def ComputeDistanceMatrix(n, p=2):
+def ComputeDistanceMatrix(n, p=2, q=1):
     """ Compute the ground distance with power p of an n*n image """
     def m(x,y):
         return x*s+y
@@ -19,7 +19,7 @@ def ComputeDistanceMatrix(n, p=2):
         for j in range(s):
             for v in range(s):
                 for w in range(s):
-                    C[m(i,j)][m(v,w)] = pow(abs(i - v)**p + abs(j - w)**p, 1/p)
+                    C[m(i,j)][m(v,w)] = pow(pow(abs(i - v)**p + abs(j - w)**p, 1/p), q)
     return C
 
 
@@ -86,8 +86,8 @@ if __name__ == "__main__":
     M2 = np.loadtxt(open(filename2, "rb"), delimiter=",")
     M2 = np.array(M2.flatten())
 
-    M1,M2 = Preprocessing(M1,M2)
+    #M1,M2 = Preprocessing(M1,M2)
 
 
-    C = ComputeDistanceMatrix(len(M1), p=1)
+    C = ComputeDistanceMatrix(len(M1), p=2, q=1)
     print(WassersteinDualSimplex(M1, M2, C))
