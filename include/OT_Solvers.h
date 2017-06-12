@@ -10,9 +10,15 @@
 
 #include "OT_BasicTypes.h"
 
+namespace DOTLib {
 /**
-* @brief Compute Earth Moving Distance (EMD) with L1 norm (with no power)
-*        between pair of images spacing razs at "constant" angle distance, with given degree ration
-*        Example: with degree=45, it puts 8 rays for vertex (at most)
+* @brief Compute Earth Moving Distance (EMD) with L1 norm (with no power q)
 */
 real_t solve_L1_1(const histogram_t& h1, const histogram_t& h2);
+
+/**
+* @brief Compute Earth Moving Distance (EMD) with L_infinity norm (with no power q)
+*/
+real_t solve_Linf_1(const histogram_t& h1, const histogram_t& h2);
+
+};

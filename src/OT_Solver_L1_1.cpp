@@ -10,6 +10,8 @@
 
 #include "OT_Solvers.h"
 
+namespace DOTLib {
+
 /**
 * @brief Compute Earth Moving Distance (EMD) with L1 norm (with no power)
 *        between pair of images spacing razs at "constant" angle distance, with given degree ration
@@ -35,7 +37,7 @@ real_t solve_L1_1(const histogram_t& h1, const histogram_t& h2) {
       nodes.emplace_back(g.addNode());
 
    std::vector<Graph::Arc> arcs;
-   arcs.reserve(8 * d);
+   arcs.reserve(4 * d); // at most 4 arcs for each nodes
    for (size_t i = 0; i < s; ++i)
       for (size_t j = 0; j < s - 1; ++j) {
          arcs.emplace_back(g.addArc(nodes[ID(i, j)], nodes[ID(i, j + 1)]));
@@ -48,16 +50,7 @@ real_t solve_L1_1(const histogram_t& h1, const histogram_t& h2) {
          arcs.emplace_back(g.addArc(nodes[ID(i + 1, j)], nodes[ID(i, j)]));
       }
 
-   for (size_t i = 0; i < s - 1; ++i)
-      for (size_t j = 0; j < s - 1; ++j) {
-         arcs.emplace_back(g.addArc(nodes[ID(i, j)], nodes[ID(i + 1, j + 1)]));
-         arcs.emplace_back(g.addArc(nodes[ID(i + 1, j + 1)], nodes[ID(i, j)]));
-         arcs.emplace_back(g.addArc(nodes[ID(i, j + 1)], nodes[ID(i + 1, j)]));
-         arcs.emplace_back(g.addArc(nodes[ID(i + 1, j)], nodes[ID(i, j + 1)]));
-      }
-
-   fprintf(stdout, "Input graph created with %d nodes and %d arcs\n",
-           countNodes(g), countArcs(g));
+   logger->info("Input graph created with {1} nodes and {0} arcs", countArcs(g), countNodes(g));
 
    NetworkSimplex<Graph, LimitValueType, real_t> simplex(g);
 
@@ -85,13 +78,13 @@ real_t solve_L1_1(const histogram_t& h1, const histogram_t& h2) {
 
    switch (ret) {
    case NetworkSimplex<Graph>::INFEASIBLE:
-      std::cerr << "INFEASIBLE" << std::endl;
+      logger->error("NetworkSimplex<Graph>::INFEASIBLE");
       break;
    case NetworkSimplex<Graph>::OPTIMAL:
-      std::cerr << "OPTIMAL" << std::endl;
+      logger->info("NetworkSimplex<Graph>::OPTIMAL");
       break;
    case NetworkSimplex<Graph>::UNBOUNDED:
-      std::cerr << "UNBOUNDED" << std::endl;
+      logger->error("NetworkSimplex<Graph>::UNBOUNDED");
       break;
    }
 
@@ -99,3 +92,5 @@ real_t solve_L1_1(const histogram_t& h1, const histogram_t& h2) {
 
    return sol_value;
 }
+
+};

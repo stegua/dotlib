@@ -8,13 +8,15 @@
 
 #pragma once
 
-#include "OT_BasicTypes.h"
+#include "OT_Solvers.h"
+
+namespace DOTLib {
 
 /**
-* @brief Compute Earth Moving Distance (EMD) between pair of images
+* @brief Compute Earth Moving Distance (EMD) with L_infinity norm (with no power)
 */
-LimitValueType compute_L1_APX_EMD(const histogram_t& h1, const histogram_t& h2, const matrix_t& cost) {
-   real_t distance = std::numeric_limits<real_t>::max();
+real_t solve_Linf_1(const histogram_t& h1, const histogram_t& h2) {
+   auto logger = spd::get("console");
 
    size_t d = h1.size();
    size_t s = static_cast<size_t>(sqrt(d));
@@ -33,7 +35,7 @@ LimitValueType compute_L1_APX_EMD(const histogram_t& h1, const histogram_t& h2, 
       nodes.emplace_back(g.addNode());
 
    std::vector<Graph::Arc> arcs;
-   arcs.reserve(4 * d); // at most 8 arcs for each nodes
+   arcs.reserve(8 * d);  // at most 8 arcs for each nodes
    for (size_t i = 0; i < s; ++i)
       for (size_t j = 0; j < s - 1; ++j) {
          arcs.emplace_back(g.addArc(nodes[ID(i, j)], nodes[ID(i, j + 1)]));
@@ -46,13 +48,21 @@ LimitValueType compute_L1_APX_EMD(const histogram_t& h1, const histogram_t& h2, 
          arcs.emplace_back(g.addArc(nodes[ID(i + 1, j)], nodes[ID(i, j)]));
       }
 
-   fprintf(stdout, "Input graph created with %d nodes and %d arcs\n",
-           countNodes(g), countArcs(g));
+   for (size_t i = 0; i < s - 1; ++i)
+      for (size_t j = 0; j < s - 1; ++j) {
+         arcs.emplace_back(g.addArc(nodes[ID(i, j)], nodes[ID(i + 1, j + 1)]));
+         arcs.emplace_back(g.addArc(nodes[ID(i + 1, j + 1)], nodes[ID(i, j)]));
+         arcs.emplace_back(g.addArc(nodes[ID(i, j + 1)], nodes[ID(i + 1, j)]));
+         arcs.emplace_back(g.addArc(nodes[ID(i + 1, j)], nodes[ID(i, j + 1)]));
+      }
 
-   NetworkSimplex<Graph, LimitValueType, LimitValueType> cycle(g);
+   logger->info("Input graph created with {1} nodes and {0} arcs", countArcs(g), countNodes(g));
+
+   NetworkSimplex<Graph, LimitValueType, real_t> simplex(g);
 
    // lower and upper bounds, cost
-   ListDigraph::ArcMap<LimitValueType> l_i(g), u_i(g), c_i(g);
+   ListDigraph::ArcMap<LimitValueType> l_i(g), u_i(g);
+   ListDigraph::ArcMap<real_t> c_i(g);
 
    // FLow balance
    ListDigraph::NodeMap<LimitValueType> b_i(g);
@@ -60,30 +70,33 @@ LimitValueType compute_L1_APX_EMD(const histogram_t& h1, const histogram_t& h2, 
       b_i[nodes[i]] = int(h1[i] - h2[i]);
 
    // Add all edges
-   for (const auto& a : arcs) {
+   for (size_t i = 0, i_max = arcs.size(); i < i_max; ++i) {
+      const auto& a = arcs[i];
       l_i[a] = 0;
-      u_i[a] = cycle.INF;
-      c_i[a] = 1;  // cost
+      u_i[a] = simplex.INF;
+      c_i[a] = 1.0;
    }
 
    //set lower/upper bounds, cost
-   cycle.lowerMap(l_i).upperMap(u_i).costMap(c_i).supplyMap(b_i);
+   simplex.lowerMap(l_i).upperMap(u_i).costMap(c_i).supplyMap(b_i);
 
-   NetworkSimplex<Graph, LimitValueType, LimitValueType>::ProblemType ret = cycle.run();
+   NetworkSimplex<Graph, LimitValueType, real_t>::ProblemType ret = simplex.run();
 
    switch (ret) {
    case NetworkSimplex<Graph>::INFEASIBLE:
-      std::cerr << "INFEASIBLE" << std::endl;
+      logger->error("NetworkSimplex<Graph>::INFEASIBLE");
       break;
    case NetworkSimplex<Graph>::OPTIMAL:
-      std::cerr << "OPTIMAL" << std::endl;
+      logger->info("NetworkSimplex<Graph>::OPTIMAL");
       break;
    case NetworkSimplex<Graph>::UNBOUNDED:
-      std::cerr << "UNBOUNDED" << std::endl;
+      logger->error("NetworkSimplex<Graph>::UNBOUNDED");
       break;
    }
 
-   LimitValueType sol_value = cycle.totalCost();
+   real_t sol_value = simplex.totalCost();
 
    return sol_value;
 }
+
+};

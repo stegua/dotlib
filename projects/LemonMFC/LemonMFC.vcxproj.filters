@@ -15,7 +15,10 @@
     <ClCompile Include="..\..\src\OT_Solver_L1_1.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\Test_L1.cpp">
+    <ClCompile Include="..\..\src\OT_Solver_Linf_1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\OT_UnitTests.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

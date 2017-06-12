@@ -119,8 +119,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\OT_Solver_L1_1.cpp" />
+    <ClCompile Include="..\..\src\OT_Solver_Linf_1.cpp" />
     <ClCompile Include="..\..\src\TestImages.cpp" />
-    <ClCompile Include="..\..\src\Test_L1.cpp" />
+    <ClCompile Include="..\..\src\OT_UnitTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\OT_Solvers.h" />
