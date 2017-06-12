@@ -8,25 +8,20 @@
 
 #pragma once
 
-#include <lemon/smart_graph.h>
-#include <lemon/lgf_reader.h>
-#include <lemon/lgf_writer.h>
-#include <lemon/list_graph.h>
-#include <lemon/cycle_canceling.h>
-#include <lemon/network_simplex.h>
+// FROM STDLIB
+#include <cassert>
 
-#include <lemon/preflow.h>
-
-using namespace lemon;
-typedef ListDigraph Graph;
-typedef int64_t LimitValueType;
+// For PI constant definition as M_PI
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 // My Types for OT lib
 typedef double   real_t;
+
+#include <vector>
 typedef std::vector< real_t >  histogram_t;
 typedef std::vector< real_t >  row_t;
 typedef std::vector< row_t  >  matrix_t;
-
 
 #include <unordered_set>
 typedef std::unordered_set<int> int_set;
@@ -39,9 +34,23 @@ struct pair_hash {
 typedef std::unordered_set<std::pair<int, int>, pair_hash> pair_set;
 
 
+// LEMON GRAPH LIBRARY
+#include <lemon/smart_graph.h>
+#include <lemon/lgf_reader.h>
+#include <lemon/lgf_writer.h>
+#include <lemon/list_graph.h>
+#include <lemon/network_simplex.h>
+#include <lemon/cycle_canceling.h>
 
-#include <cassert>
+#include <lemon/preflow.h>
 
-// For PI constant definition as M_PI
-#define _USE_MATH_DEFINES
-#include <math.h>
+using namespace lemon;
+typedef lemon::ListDigraph Graph;
+typedef int64_t LimitValueType;
+
+
+// EXTERNAL LIBRARIES:
+
+// SpdLog (https://github.com/gabime/spdlog)
+#include "spdlog/spdlog.h"
+namespace spd = spdlog;

@@ -12,6 +12,12 @@
     <ClCompile Include="..\..\src\TestImages.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\OT_Solver_L1_1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Test_L1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\OT_Approx_L2.h">
@@ -24,6 +30,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\OT_Apx_L2_1.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\OT_Solvers.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

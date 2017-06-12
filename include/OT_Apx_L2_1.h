@@ -16,6 +16,8 @@
 *        Example: with degree=45, it puts 8 rays for vertex (at most)
 */
 real_t apx_L2_1(const histogram_t& h1, const histogram_t& h2, double degree = 1) {
+   using namespace lemon;
+
    size_t d = h1.size();
    size_t s = static_cast<size_t>(sqrt(d));
 
@@ -160,6 +162,8 @@ real_t apx_L2_1(const histogram_t& h1, const histogram_t& h2, double degree = 1)
 * @brief Compute Earth Moving Distance (EMD) between pair of images
 */
 real_t apx_L2_2(const histogram_t& h1, const histogram_t& h2) {
+   using namespace lemon;
+
    real_t distance = std::numeric_limits<real_t>::max();
 
    size_t d = h1.size();

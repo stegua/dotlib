@@ -16,6 +16,8 @@
 *        Example: with degree=45, it puts 8 rays for vertex (at most)
 */
 real_t solve_L1_1(const histogram_t& h1, const histogram_t& h2) {
+   auto logger = spd::get("console");
+
    size_t d = h1.size();
    size_t s = static_cast<size_t>(sqrt(d));
 
