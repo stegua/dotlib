@@ -5,11 +5,17 @@ The long term objective is to develop Distributed Optimal Transport Algorithms.
 The project is just started and at the moment containes only python scripts to test the distances 
 between pair of images of the [DOTMark benchmarks](http://www.stochastik.math.uni-goettingen.de/index.php?id=215/).
 
-To run the scripts you need the followinf libraries:
+To run the scripts you need the following libraries:
 
 * [Matplotlib](https://matplotlib.org/) (python)
 * [NetworkX](http://networkx.github.io/) (python)
 * [Gurobi](http://www.gurobi.com)
+
+To build the library from C++ source, you need the following external libraries:
+
+* [Lemon Graph Library](http://lemon.cs.elte.hu/trac/lemon)
+* [Spdlog](https://github.com/gabime/spdlog)
+* [Catch](https://github.com/philsquared/Catch)
 
 
 ### MIT License
