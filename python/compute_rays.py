@@ -15,7 +15,7 @@ def DrawMatrix(A):
 def cart2pol(x, y):
     return np.arctan2(y, x)
 
-n = 256
+n = 32
 A = np.ones((2*n+1,2*n+1))
 D = set()
 K = {}
@@ -23,7 +23,7 @@ Ls = [i for i in range(n)]
 for i in Ls:
     for j in Ls:
         if (i,j) != (0,0):
-            f = int(100*cart2pol(i,j))
+            f = round(180/1/np.pi*cart2pol(i,j))*1
             if f not in D:
                 D.add(f)
                 K[f] = 1
@@ -36,5 +36,5 @@ for i in Ls:
             
 
 DrawMatrix(A)
-print(K)
+print(sorted(K))
 print(len(D), n*n, n*np.log(n), sum([K[k] for k in K]))

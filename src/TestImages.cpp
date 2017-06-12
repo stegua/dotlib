@@ -168,7 +168,7 @@ matrix_t compute_distance(size_t n, int p = 2, int q = 1) {
          cost.emplace_back(row_t(n * n, 0));
          for (int v = 0; v < n; ++v)
             for (int w = 0; w < n; ++w)
-               cost[m(i, j)][m(v, w)] = pow(pow(pow(fabs(i - v), p) + pow(fabs(j - w), p), 1.0 / p), q);
+               cost[m(i, j)][m(v, w)] = std::trunc(65536 * pow(pow(pow(fabs(i - v), p) + pow(fabs(j - w), p), 1.0 / p), q)) / 65536;
       }
 
    return cost;
@@ -324,56 +324,110 @@ real_t compute_ns_EMD(const histogram_t& h1, const histogram_t& h2, const matrix
 }
 
 int main(int argc, char* argv) {
-   // Size of the square image
-   size_t n = 32;
 
-   histogram_t image1 = read_image(n, "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\ClassicImages\\data32_1001.csv");
-   histogram_t image2 = read_image(n, "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\ClassicImages\\data32_1010.csv");
+   if (argc == 2) {
+      std::string base = "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\ClassicImages\\";
+      //std::string base = "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\LogGRF\\";
+      size_t n = 32;
+      std::vector<std::string> Fs = { "data32_1001.csv", "data32_1002.csv", "data32_1003.csv", "data32_1004.csv", "data32_1005.csv",
+                                      "data32_1006.csv", "data32_1007.csv", "data32_1008.csv", "data32_1009.csv", "data32_1010.csv"
+                                    };
+      //size_t n = 64;
+      //std::vector<std::string> Fs = { "data64_1001.csv", "data64_1002.csv", "data64_1003.csv", "data64_1004.csv", "data64_1005.csv",
+      //                                "data64_1006.csv", "data64_1007.csv", "data64_1008.csv", "data64_1009.csv", "data64_1010.csv"
+      //                              };
 
-   if (false) {
-      n = 2;
-      image1 = { 1, 0, 0, 0 };
-      image2 = { 0, 0, 0, 1 };
-   }
+      for (const auto& f1 : Fs)
+         for (const auto& f2 : Fs) {
+            if (f1 < f2) {
+               std::cout << "Comparing: " << (base + f1) << " and " << (base + f2) << std::endl;
 
-   // Time vars
-   std::chrono::time_point<std::chrono::system_clock> start, end;
-   // Start time.
+               histogram_t image1 = read_image(n, base + f1);
+               histogram_t image2 = read_image(n, base + f2);
+               // Time vars
+               std::chrono::time_point<std::chrono::system_clock> start, end;
+               // Start time.
+               start = std::chrono::system_clock::now();
 
-   start = std::chrono::system_clock::now();
+               matrix_t cost = compute_distance(n, 2, 1);
+               real_t emd_cost = compute_ns_EMD(image1, image2, cost);
 
-   matrix_t cost = compute_distance(n, 2, 1);
-   if (false) {
-      for (int i = 0; i < n * n; ++i) {
-         for (int j = 0; j < n * n; ++j)
-            fprintf(stdout, "%.2f ", cost[i][j]);
-         fprintf(stdout, "\n");
-      }
+               end = std::chrono::system_clock::now();
+               std::chrono::duration<double> inlineTimeElapsed = end - start;
+               std::cout << "EMD Cost: " << emd_cost << " - Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms \n";
+
+               start = std::chrono::system_clock::now();
+
+
+               auto l21_cost = apx_L2_1(image1, image2);
+
+               // End time.
+               end = std::chrono::system_clock::now();
+               std::chrono::duration<double> t2 = end - start;
+               std::cout << "APX Cost: " << l21_cost << " - Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t2).count() << " ms \n";
+
+               std::cout << f1 << " " << f2 << " Ratio: " << fabs(l21_cost - emd_cost) / emd_cost * 100 << " %\n";
+            }
+         }
+
       exit(0);
    }
 
-   // End time.
+// Size of the square image
+   size_t n = 32;
+//   histogram_t image1 = read_image(n, "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\ClassicImages\\data32_1001.csv");
+//histogram_t image2 = read_image(n, "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\ClassicImages\\data32_1005.csv");
+
+   histogram_t image1 = read_image(n, "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\ClassicImages\\data32_1004.csv");
+   histogram_t image2 = read_image(n, "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\ClassicImages\\data32_1008.csv");
+
+   if (false) {
+      n = 3;
+      image1 = { 1, 0, 0, 0, 0, 0, 0, 0, 0 };
+      image2 = { 0, 0, 0, 0, 0, 0, 0, 1, 0 };
+   }
+
+// Time vars
+   std::chrono::time_point<std::chrono::system_clock> start, end;
+// Start time.
+   start = std::chrono::system_clock::now();
+
+
+// End time.
    end = std::chrono::system_clock::now();
    std::chrono::duration<double> inlineTimeElapsed = end - start;
 
-   std::cout << "Matrix cost copmuted: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms \n";
+   std::cout << "Matrix cost computed: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms \n";
 
-   real_t emd_cost = compute_ns_EMD(image1, image2, cost);
+   real_t emd_cost = 1;
+   if (true) {
+      matrix_t cost = compute_distance(n, 2, 1);
+      if (false) {
+         for (int i = 0; i < n * n; ++i) {
+            for (int j = 0; j < n * n; ++j)
+               fprintf(stdout, "%.2f ", cost[i][j]);
+            fprintf(stdout, "\n");
+         }
+         exit(0);
+      }
 
-   end = std::chrono::system_clock::now();
-   inlineTimeElapsed = end - start;
-   std::cout << "Cost: " << emd_cost << " - Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms \n";
+      emd_cost = compute_ns_EMD(image1, image2, cost);
 
-   start = std::chrono::system_clock::now();
+      end = std::chrono::system_clock::now();
+      inlineTimeElapsed = end - start;
+      std::cout << "Cost: " << emd_cost << " - Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms \n";
+
+      start = std::chrono::system_clock::now();
+   }
+
    auto l21_cost = apx_L2_1(image1, image2);
-   std::cout << "Cost: " << l21_cost << " - Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms \n";
-
-   std::cout << "Ratio: " << fabs(l21_cost - emd_cost) / emd_cost * 100 << " %\n";
 
    // End time.
    end = std::chrono::system_clock::now();
    inlineTimeElapsed = end - start;
+   std::cout << "Cost: " << l21_cost << " - Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms \n";
 
+   std::cout << "Ratio: " << fabs(l21_cost - emd_cost) / emd_cost * 100 << " %\n";
 
    return 0;
 }

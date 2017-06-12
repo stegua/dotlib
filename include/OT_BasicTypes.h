@@ -28,3 +28,20 @@ typedef std::vector< real_t >  row_t;
 typedef std::vector< row_t  >  matrix_t;
 
 
+#include <unordered_set>
+typedef std::unordered_set<int> int_set;
+
+struct pair_hash {
+   inline std::size_t operator()(const std::pair<int, int> & v) const {
+      return v.first * 31 + v.second;
+   }
+};
+typedef std::unordered_set<std::pair<int, int>, pair_hash> pair_set;
+
+
+
+#include <cassert>
+
+// For PI constant definition as M_PI
+#define _USE_MATH_DEFINES
+#include <math.h>
