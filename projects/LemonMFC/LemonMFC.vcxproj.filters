@@ -23,13 +23,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\OT_Approx_L2.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\OT_BasicTypes.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\OT_Solver_L1_1.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\OT_Apx_L2_1.h">
