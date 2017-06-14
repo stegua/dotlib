@@ -1,4 +1,7 @@
 # Distributed Optimal Transport Library
+
+[![Build Status](https://travis-ci.org/stegua/dotlib.svg?branch=master)](https://travis-ci.org/stegua/dotlib)
+
 This repository contains basic scripts for computing Wasserstein distances.
 The long term objective is to develop Distributed Optimal Transport Algorithms.
 
