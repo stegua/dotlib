@@ -18,13 +18,19 @@ using namespace DOT;
 void default_test() {
    // Base test
    std::string base = "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
+   std::string SEP = "\\";
+#ifdef CINECA
+   base = "../data/DOTmark/";
+   SEP = "/";
+#endif
+
    std::string dtype = "ClassicImages";
 
    std::string f1 = "data32_1001.csv";
    std::string f2 = "data32_1002.csv";
 
-   Histogram2D h1(base + dtype + "\\" + f1);
-   Histogram2D h2(base + dtype + "\\" + f2);
+   Histogram2D h1(base + dtype + SEP + f1);
+   Histogram2D h2(base + dtype + SEP + f2);
 
    fprintf(stdout, "Total weight H1: %lld\n", h1.computeTotalWeight());
    fprintf(stdout, "Total weight H2: %lld\n", h1.computeTotalWeight());
@@ -37,7 +43,7 @@ void default_test() {
    if (true) { // Exact method
       int n = static_cast<int>(h1.getN());
       // Id using L2, must compute a list of coprimes number
-      config.buildCoprimes(n - 1);
+      config.buildCoprimes(n-1);
    }
 
    // Time vars
@@ -57,7 +63,7 @@ void default_test() {
 }
 
 // Main entry point
-int main(int argc, char* argv) {
+int main(int argc, char* argv[]) {
    fprintf(stdout, "Running DOTlib v0.2.0\n");
 
    if (argc == 1) {

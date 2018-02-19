@@ -207,7 +207,7 @@ int64_t solve_network_L2(const Histogram2D& h1, const Histogram2D& h2,
    // Build the graph for max flow
    LemonGraph g;
 
-   size_t s = h1.getN();
+   int s = static_cast<int>(h1.getN());
    size_t d = s * s;
 
    auto ID = [&s](size_t x, size_t y) {
@@ -230,13 +230,13 @@ int64_t solve_network_L2(const Histogram2D& h1, const Histogram2D& h2,
             int w = p.second;
             if (i + v >= 0 && i + v < s && j + w >= 0 && j + w < s) {
                arcs.emplace_back(g.addArc(nodes[ID(i, j)], nodes[ID(i + v, j + w)]));
-               a_costs.emplace_back(static_cast<int64_t>(INTEGER_TOL*sqrt(pow(v, 2) + pow(w, 2))));
+               a_costs.emplace_back(static_cast<int64_t>(sqrt(pow(v, 2) + pow(w, 2))*INTEGER_TOL));
             }
          }
 
    fprintf(stdout, "Input graph created with %ld nodes and %ld arcs\n", countNodes(g), countArcs(g));
 
-   LemonSimplex simplex(g);
+   NetworkSimplex<LemonGraph, LimitValueType, LimitValueType> simplex(g);
 
    // lower and upper bounds, cost
    ListDigraph::ArcMap<LimitValueType> l_i(g), u_i(g);
@@ -246,8 +246,8 @@ int64_t solve_network_L2(const Histogram2D& h1, const Histogram2D& h2,
    ListDigraph::NodeMap<LimitValueType> b_i(g);
    {
       size_t idx = 0;
-      for (size_t i = 0; i < s; ++i)
-         for (size_t j = 0; j < s; ++j)
+      for (int i = 0; i < s; ++i)
+         for (int j = 0; j < s; ++j)
             b_i[nodes[idx++]] = LimitValueType(h1.get(i, j) - h2.get(i, j));
    }
 

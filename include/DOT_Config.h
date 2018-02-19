@@ -19,6 +19,15 @@ enum GroundDistance { L1=0, L2=1, Linf=2 };
 // Solver algorithm
 enum Algorithm { FlowSimplex=0, CPLEX=1, Gurobi=2 };
 
+// In standarc C++17 it is better to use function std::gcd
+int gcd(int a, int b) {
+   while (b != 0) {
+      int t = b;
+      b = a % b;
+      a = t;
+   }
+   return a;
+}
 
 /**
 * @brief Config object
@@ -39,7 +48,7 @@ class Config {
       coprimes.clear();
       for (int v = -L; v <= L; ++v)
          for (int w = -L; w <= L; ++w)
-            if (!(v == 0 && w == 0) && std::gcd(v, w) == 1)
+            if (!(v == 0 && w == 0) && gcd(abs(v), abs(w)) == 1)
                coprimes.emplace_back(v, w);
       // Use as few memory as possible
       coprimes.shrink_to_fit();
