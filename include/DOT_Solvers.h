@@ -28,7 +28,11 @@ int64_t compute_wd1(const Histogram2D& h1, const Histogram2D& h2, const Config& 
    if (config.algo == Algorithm::FlowSimplex) {
       if (config.ground_dist == GroundDistance::L1)
          return solve_network_L1(h1, h2);
-
+      if (config.ground_dist == GroundDistance::Linf)
+         return solve_network_Linf(h1, h2);
+      if (config.ground_dist == GroundDistance::L2) {
+         return solve_network_L2(h1, h2, config.coprimes);
+      }
    }
    return -1;
 }

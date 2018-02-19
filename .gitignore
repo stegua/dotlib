@@ -55,3 +55,5 @@ gurobi.log
 /projects/LemonMFC/.vs/LemonMFC/v15
 /python/.cache/v/cache
 /python/__pycache__
+/msvc/DOTLib/x64/Release
+/msvc/DOTLib/.vs/DOTLib/v15/ipch/AutoPCH

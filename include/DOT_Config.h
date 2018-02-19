@@ -9,6 +9,7 @@
 #pragma once
 
 #include "DOT_BasicTypes.h"
+#include <numeric>
 
 namespace DOT {
 
@@ -32,6 +33,19 @@ class Config {
       fprintf(stdout, "PARAMETERS: %d\n", seed);
    }
 
+   // Compute the list of coprimes directions as a function of L
+   void buildCoprimes(int L) {
+      // Reset
+      coprimes.clear();
+      for (int v = -L; v <= L; ++v)
+         for (int w = -L; w <= L; ++w)
+            if (!(v == 0 && w == 0) && std::gcd(v, w) == 1)
+               coprimes.emplace_back(v, w);
+      // Use as few memory as possible
+      coprimes.shrink_to_fit();
+   }
+
+
    // Seed for random generator device
    int seed;
 
@@ -40,6 +54,9 @@ class Config {
 
    // Type of algorithm for the solver
    Algorithm algo;
+
+   // List of pair of coprimes number between (-L, L)
+   std::vector<std::pair<int, int>> coprimes;
 };
 
 } // End namespace

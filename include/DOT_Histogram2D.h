@@ -10,6 +10,9 @@
 
 #include "DOT_BasicTypes.h"
 
+#include <fstream>
+#include <sstream>
+
 namespace DOT {
 
 /**
@@ -55,6 +58,9 @@ class Histogram2D {
 
       for (size_t i = 1; i < n; ++i)
          read_row(i);
+
+      // Use as few memory as possible
+      data.shrink_to_fit();
 
       in_file.close();
    }

@@ -16,13 +16,10 @@ using namespace DOT;
 
 // Default test: Wasserstein distance order 1, ground distance L1, two classic images
 void default_test() {
-   Config config;
-   config.ground_dist = GroundDistance::L1;
-   config.algo = Algorithm::FlowSimplex;
-
    // Base test
    std::string base = "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
    std::string dtype = "ClassicImages";
+
    std::string f1 = "data32_1001.csv";
    std::string f2 = "data32_1002.csv";
 
@@ -31,6 +28,17 @@ void default_test() {
 
    fprintf(stdout, "Total weight H1: %lld\n", h1.computeTotalWeight());
    fprintf(stdout, "Total weight H2: %lld\n", h1.computeTotalWeight());
+
+   // Set up configuration option
+   Config config;
+   config.algo = Algorithm::FlowSimplex;
+
+   config.ground_dist = GroundDistance::L2;
+   if (true) { // Exact method
+      int n = static_cast<int>(h1.getN());
+      // Id using L2, must compute a list of coprimes number
+      config.buildCoprimes(n - 1);
+   }
 
    // Time vars
    std::chrono::time_point<std::chrono::system_clock> start, end;
