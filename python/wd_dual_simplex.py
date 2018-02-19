@@ -40,6 +40,7 @@ def WassersteinDualSimplex(h1, h2, M):
 
     # Build model
     m = Model()
+    m.setParam(GRB.Param.NumericFocus, 3)
     #m.setParam(GRB.Param.TimeLimit, 300)
     #m.setParam(GRB.Param.Presolve,    0)    
     #m.setParam(GRB.Param.Threads,     1)
@@ -78,11 +79,11 @@ def WassersteinDualSimplex(h1, h2, M):
 #              MAIN ENTRY POINT
 #------------------------------------------
 if __name__ == "__main__":
-    filename1 = 'D:\Ricerca\DOTA\data\DOTmark_1.0\Data\ClassicImages\data32_1004.csv'
+    filename1 = 'D:\Ricerca\DOTA\data\DOTmark_1.0\Data\ClassicImages\data32_1005.csv'
     M1 = np.loadtxt(open(filename1, "rb"), delimiter=",")
     M1 = np.array(M1.flatten())
 
-    filename2 = 'D:\Ricerca\DOTA\data\DOTmark_1.0\Data\ClassicImages\data32_1008.csv'
+    filename2 = 'D:\Ricerca\DOTA\data\DOTmark_1.0\Data\ClassicImages\data32_1009.csv'
     M2 = np.loadtxt(open(filename2, "rb"), delimiter=",")
     M2 = np.array(M2.flatten())
 

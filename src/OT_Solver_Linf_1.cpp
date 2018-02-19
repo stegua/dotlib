@@ -67,7 +67,7 @@ real_t solve_Linf_1(const histogram_t& h1, const histogram_t& h2) {
    // FLow balance
    ListDigraph::NodeMap<LimitValueType> b_i(g);
    for (size_t i = 0; i < d; ++i)
-      b_i[nodes[i]] = int(h1[i] - h2[i]);
+      b_i[nodes[i]] = LimitValueType(h1[i] - h2[i]);
 
    // Add all edges
    for (size_t i = 0, i_max = arcs.size(); i < i_max; ++i) {

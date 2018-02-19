@@ -21,4 +21,9 @@ real_t solve_L1_1(const histogram_t& h1, const histogram_t& h2);
 */
 real_t solve_Linf_1(const histogram_t& h1, const histogram_t& h2);
 
+/*
+* @brief
+*/
+real_t solve_L2_1(const histogram_t& h1, const histogram_t& h2, int L);
+
 };

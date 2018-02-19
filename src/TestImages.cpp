@@ -10,43 +10,8 @@
 
 #include "OT_BasicTypes.h"
 #include "OT_Apx_L2_1.h"
-
-
-/**
-* @brief Read images from text file and return corresponfing matrix
-*/
-histogram_t read_image(size_t n, std::string filename) {
-   auto m = [&n](size_t x, size_t y) {
-      return x * n + y;
-   };
-
-   histogram_t image(n * n, 0);
-   image.shrink_to_fit();
-
-   std::ifstream in_file(filename);
-
-   if (!in_file) {
-      fprintf(stdout, "Cannot open file %s.\n", filename);
-      return image;
-   }
-
-   for (size_t i = 0; i < n; ++i) {
-      size_t j = 0;
-      std::string         line;
-      std::getline(in_file, line);
-      std::stringstream   lineStream(line);
-      std::string         cell;
-
-      while (std::getline(lineStream, cell, ',')) {
-         image[m(i, j)] = stoi(cell);
-         ++j;
-      }
-   }
-
-   in_file.close();
-
-   return image;
-}
+#include "OT_Exact_L2.h"
+#include "OT_Utils.h"
 
 /**
 * @brief Read images from text file and return corresponfing matrix
@@ -225,6 +190,34 @@ real_t compute_ns_EMD(const histogram_t& h1, const histogram_t& h2, const matrix
 /**
 * @brief Maint Entry point
 */
+int mmmain(int argc, char* argv) {
+   size_t n = 32;
+
+   histogram_t image1 = read_image(n, "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\ClassicImages\\data32_1005.csv");
+   histogram_t image2 = read_image(n, "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\ClassicImages\\data32_1009.csv");
+
+   // Time vars
+   std::chrono::time_point<std::chrono::system_clock> start, end;
+   // Start time.
+   start = std::chrono::system_clock::now();
+
+   auto exact_cost = solve_exact_W_1_2(image1, image2);
+
+   // End time.
+   end = std::chrono::system_clock::now();
+   std::chrono::duration<double> inlineTimeElapsed = end - start;
+
+
+   // End time.
+   end = std::chrono::system_clock::now();
+   inlineTimeElapsed = end - start;
+   std::cout << "Cost: " << exact_cost << " - Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms \n";
+
+   //std::cout << "Ratio: " << fabs(l21_cost - emd_cost) / emd_cost * 100 << " %\n";
+
+   return 0;
+}
+
 #ifdef MY_TEST
 int main(int argc, char* argv) {
    // Console logger with color

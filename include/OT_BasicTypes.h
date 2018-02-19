@@ -1,5 +1,5 @@
 /**
-* @fileoverview Copyright (c) 2017, Stefano Gualandi,
+* @fileoverview Copyright (c) 2017-18, Stefano Gualandi,
 *               via Ferrata, 1, I-27100, Pavia, Italy
 *
 * @author stefano.gualandi@gmail.com (Stefano Gualandi)
@@ -17,6 +17,8 @@
 
 // My Types for OT lib
 typedef double   real_t;
+
+const int MUL = 1000000;
 
 #include <vector>
 typedef std::vector< real_t >  histogram_t;
@@ -40,6 +42,7 @@ typedef std::unordered_set<std::pair<int, int>, pair_hash> pair_set;
 #include <lemon/lgf_writer.h>
 #include <lemon/list_graph.h>
 #include <lemon/network_simplex.h>
+#include <lemon/cost_scaling.h>
 #include <lemon/cycle_canceling.h>
 
 #include <lemon/preflow.h>
