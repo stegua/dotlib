@@ -57,3 +57,4 @@ gurobi.log
 /python/__pycache__
 /msvc/DOTLib/x64/Release
 /msvc/DOTLib/.vs/DOTLib/v15/ipch/AutoPCH
+msvc/DOTLib/.vs/DOTLib/v15/Browse.VC.opendb
