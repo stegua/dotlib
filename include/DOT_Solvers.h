@@ -1,0 +1,36 @@
+/**
+* @fileoverview Copyright (c) 2017-18, Stefano Gualandi,
+*               via Ferrata, 1, I-27100, Pavia, Italy
+*
+* @author stefano.gualandi@gmail.com (Stefano Gualandi)
+*
+*/
+
+#pragma once
+
+#include "DOT_Histogram2D.h"
+#include "DOT_Config.h"
+#include "DOT_WD1.h"
+
+namespace DOT {
+
+/**
+* @brief Compute Wasserstein distance of order p
+*/
+double compute_wdp(const Histogram2D& h1, const Histogram2D& h2, const Config& config) {
+
+}
+
+/**
+* @brief Compute Wasserstein distance of order 1
+*/
+int64_t compute_wd1(const Histogram2D& h1, const Histogram2D& h2, const Config& config) {
+   if (config.algo == Algorithm::FlowSimplex) {
+      if (config.ground_dist == GroundDistance::L1)
+         return solve_network_L1(h1, h2);
+
+   }
+   return -1;
+}
+
+};
