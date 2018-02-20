@@ -64,7 +64,7 @@ int64_t solve_network_L1(const Histogram2D& h1, const Histogram2D& h2) {
          arcs.emplace_back(g.addArc(nodes[ID(i + 1, j)], nodes[ID(i, j)]));
       }
 
-   fprintf(stdout, "Input graph created with %ld nodes and %ld arcs\n", countNodes(g), countArcs(g));
+   fprintf(stdout, "Input graph created with %d nodes and %d arcs\n", countNodes(g), countArcs(g));
 
    LemonSimplex simplex(g);
 
@@ -152,7 +152,7 @@ int64_t solve_network_Linf(const Histogram2D& h1, const Histogram2D& h2) {
          arcs.emplace_back(g.addArc(nodes[ID(i + 1, j)], nodes[ID(i, j + 1)]));
       }
 
-   fprintf(stdout, "Input graph created with %ld nodes and %ld arcs\n", countNodes(g), countArcs(g));
+   fprintf(stdout, "Input graph created with %d nodes and %d arcs\n", countNodes(g), countArcs(g));
 
    LemonSimplex simplex(g);
 
@@ -234,7 +234,7 @@ int64_t solve_network_L2(const Histogram2D& h1, const Histogram2D& h2,
             }
          }
 
-   fprintf(stdout, "Input graph created with %ld nodes and %ld arcs\n", countNodes(g), countArcs(g));
+   fprintf(stdout, "Input graph created with %d nodes and %d arcs\n", countNodes(g), countArcs(g));
 
    NetworkSimplex<LemonGraph, LimitValueType, LimitValueType> simplex(g);
 

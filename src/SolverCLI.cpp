@@ -32,8 +32,8 @@ void default_test() {
    Histogram2D h1(base + dtype + SEP + f1);
    Histogram2D h2(base + dtype + SEP + f2);
 
-   fprintf(stdout, "Total weight H1: %lld\n", h1.computeTotalWeight());
-   fprintf(stdout, "Total weight H2: %lld\n", h1.computeTotalWeight());
+   fprintf(stdout, "Total weight H1: %ld\n", h1.computeTotalWeight());
+   fprintf(stdout, "Total weight H2: %ld\n", h1.computeTotalWeight());
 
    // Set up configuration option
    Config config;
@@ -107,8 +107,8 @@ void all_dotmark_test() {
                      Histogram2D h1(base + dtype + SEP + f1);
                      Histogram2D h2(base + dtype + SEP + f2);
 
-                     fprintf(stdout, "Total weight H1: %lld\n", h1.computeTotalWeight());
-                     fprintf(stdout, "Total weight H2: %lld\n", h1.computeTotalWeight());
+                     fprintf(stdout, "Total weight H1: %ld\n", h1.computeTotalWeight());
+                     fprintf(stdout, "Total weight H2: %ld\n", h1.computeTotalWeight());
 
                      // Time vars
                      std::chrono::time_point<std::chrono::system_clock> start, end;

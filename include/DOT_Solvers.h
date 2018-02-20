@@ -17,8 +17,9 @@ namespace DOT {
 /**
 * @brief Compute Wasserstein distance of order p
 */
-double compute_wdp(const Histogram2D& h1, const Histogram2D& h2, const Config& config) {
+int64_t compute_wdp(const Histogram2D& h1, const Histogram2D& h2, const Config& config) {
 
+	return 0;
 }
 
 /**
