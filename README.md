@@ -1,4 +1,4 @@
-# Distributed Optimal Transport Library
+# Discrete Optimal Transport Library
 
 [![Build Status](https://travis-ci.org/stegua/dotlib.svg?branch=master)](https://travis-ci.org/stegua/dotlib)
 
@@ -8,7 +8,7 @@ The long term objective is to develop Distributed Optimal Transport Algorithms.
 The project is just started and at the moment containes only python scripts to test the distances 
 between pair of images of the [DOTMark benchmarks](http://www.stochastik.math.uni-goettingen.de/index.php?id=215/).
 
-To run the scripts you need the following libraries:
+To run the Python scripts you need the following libraries:
 
 * [Matplotlib](https://matplotlib.org/) (python)
 * [NetworkX](http://networkx.github.io/) (python)
@@ -17,12 +17,10 @@ To run the scripts you need the following libraries:
 To build the library from C++ source, you need the following external libraries:
 
 * [Lemon Graph Library](http://lemon.cs.elte.hu/trac/lemon)
-* [Spdlog](https://github.com/gabime/spdlog)
-* [Catch](https://github.com/philsquared/Catch)
 
 
 ### MIT License
-Copyright (c) 2017 Stefano Gualandi
+Copyright (c) 2017, 2018 Stefano Gualandi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
