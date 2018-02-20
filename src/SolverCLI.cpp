@@ -80,9 +80,9 @@ void all_dotmark_test() {
                                    "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"
                                  };
 
-   std::vector<std::string> Ss = { "32" };// , "64", "128", "256", "512"
+   std::vector<std::string> Ss = { "32", "64", "128", "256", "512" };
 
-   std::vector<GroundDistance> Gs = { GroundDistance::L1, GroundDistance::Linf };// , GroundDistance::L2
+   std::vector<GroundDistance> Gs = { GroundDistance::L1, GroundDistance::Linf, GroundDistance::L2 };
 
    // Set up configuration option
    Config config;
@@ -119,7 +119,7 @@ void all_dotmark_test() {
 
                      end = std::chrono::system_clock::now();
                      std::chrono::duration<double> inlineTimeElapsed = end - start;
-                     std::cout << "RESULT: " << dtype << " " << f1 << " " << f2 << ", "
+                     std::cout << "RESULT: " << S << ", " << dtype << " " << f1 << " " << f2 << ", "
                                << "Distance: " << wd1
                                << ", Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms,"
                                << " Ground: " << config.ground_dist << "\n";
