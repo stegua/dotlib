@@ -16,5 +16,5 @@
 
 
 // Integer tolerance for double distances
-const int64_t INTEGER_TOL = 1e+10;
+const int64_t INTEGER_TOL = 1000000000;
 

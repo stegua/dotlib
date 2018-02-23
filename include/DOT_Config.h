@@ -48,7 +48,7 @@ class Config {
       coprimes.clear();
       for (int v = -L; v <= L; ++v)
          for (int w = -L; w <= L; ++w)
-            if (!(v == 0 && w == 0) && gcd(abs(v), abs(w)) == 1)
+            if (!(v == 0 && w == 0) && std::gcd(v, w) == 1)
                coprimes.emplace_back(v, w);
       // Use as few memory as possible
       coprimes.shrink_to_fit();

@@ -8,11 +8,58 @@
 
 #include <chrono>
 
+// Args parser library
+#include <args.hxx>
+
+// Project includes
 #include "DOT_BasicTypes.h"
 #include "DOT_Histogram2D.h"
 #include "DOT_Solvers.h"
 
+
 using namespace DOT;
+
+// Default test: Wasserstein distance order 1, ground distance L1, two classic images
+void single_test(
+   const std::string& f1,
+   const std::string& f2,
+   const GroundDistance& gd,
+   bool exact,
+   int L
+) {
+   Histogram2D h1(f1);
+   Histogram2D h2(f2);
+
+   fprintf(stdout, "Total weight H1: %ld, H2: %ld\n", h1.computeTotalWeight(), h2.computeTotalWeight());
+
+   // Set up configuration option
+   Config config;
+   config.algo = Algorithm::FlowSimplex;
+   config.ground_dist = gd;
+
+   if (gd == GroundDistance::L2)
+      if (exact) {
+         int n = static_cast<int>(h1.getN());
+         config.buildCoprimes(n-1);
+      } else
+         config.buildCoprimes(L);
+
+   // Time vars
+   std::chrono::time_point<std::chrono::system_clock> start, end;
+   // Start time.
+   start = std::chrono::system_clock::now();
+
+   int64_t wd1 = compute_wd1(h1, h2, config);
+
+   end = std::chrono::system_clock::now();
+   std::chrono::duration<double> inlineTimeElapsed = end - start;
+   std::cout << "RESULT | "
+             << "Distance: " << wd1
+             << ", Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms"
+             << ", Ground: " << config.ground_dist
+             << ", " << f1 << " " << f2 << ", " << "\n";
+}
+
 
 // Default test: Wasserstein distance order 1, ground distance L1, two classic images
 void default_test() {
@@ -24,16 +71,15 @@ void default_test() {
    SEP = "/";
 #endif
 
-   std::string dtype = "ClassicImages";
+   std::string dtype = "Shapes";
 
-   std::string f1 = "data32_1001.csv";
-   std::string f2 = "data32_1002.csv";
+   std::string f1 = "data64_1004.csv";
+   std::string f2 = "data64_1008.csv";
 
    Histogram2D h1(base + dtype + SEP + f1);
    Histogram2D h2(base + dtype + SEP + f2);
 
-   fprintf(stdout, "Total weight H1: %ld\n", h1.computeTotalWeight());
-   fprintf(stdout, "Total weight H2: %ld\n", h1.computeTotalWeight());
+   fprintf(stdout, "Total weight H1: %ld, H2: %ld\n", h1.computeTotalWeight(), h2.computeTotalWeight());
 
    // Set up configuration option
    Config config;
@@ -57,9 +103,8 @@ void default_test() {
    std::chrono::duration<double> inlineTimeElapsed = end - start;
    std::cout << "RESULT: " << dtype << " " << f1 << " " << f2 << ", "
              << "Distance: " << wd1
-             << ", Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms \n";
-
-   start = std::chrono::system_clock::now();
+             << ", Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms,"
+             << " Ground: " << config.ground_dist << "\n";
 }
 
 // Default test: Wasserstein distance order 1, ground distance L1, two classic images
@@ -107,8 +152,7 @@ void all_dotmark_test() {
                      Histogram2D h1(base + dtype + SEP + f1);
                      Histogram2D h2(base + dtype + SEP + f2);
 
-                     fprintf(stdout, "Total weight H1: %ld\n", h1.computeTotalWeight());
-                     fprintf(stdout, "Total weight H2: %ld\n", h1.computeTotalWeight());
+                     fprintf(stdout, "Total weight H1: %ld, H2: %ld\n", h1.computeTotalWeight(), h2.computeTotalWeight());
 
                      // Time vars
                      std::chrono::time_point<std::chrono::system_clock> start, end;
@@ -134,15 +178,74 @@ void all_dotmark_test() {
 
 // Main entry point
 int main(int argc, char* argv[]) {
-   fprintf(stdout, "Running DOTlib v0.2.0\n");
+   args::ArgumentParser parser("DOTLib v0.3.0: Discrete Optimal Transport library.", "");
+   args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
+   args::ValueFlag<std::string> h1_filename(parser, "h1_filename", "Filename of the first histogram", { 'f', "h1" });
+   args::ValueFlag<std::string> h2_filename(parser, "h2_filename", "Filename of the second histogram", { 'g', "h2" });
 
-   if (argc == 1) {
-      default_test();
-      exit(EXIT_SUCCESS);
+   args::ValueFlag<int> sides(parser, "sides", "Dimension of the subgrid size L", { 'L', "sides" });
+
+   args::Flag dotmarks(parser, "dotmarks", "Run massive tests on DotMarks instances", { 'd', "dotmarks" });
+   args::Flag single(parser, "single", "Run single test between two histograms", { 's', "single" });
+   args::Flag exact(parser, "exact", "When using the L2 norm as ground distance, solve the exact problem", { 'e', "exact" });
+
+   args::Group nomrs(parser, "This group is all exclusive:", args::Group::Validators::AtMostOne);
+   args::Flag norm1(nomrs, "L1", "Norm-1 ground distance", { 'a', "l1" });
+   args::Flag norm2(nomrs, "L2", "Norm-2 ground distance", { 'b', "l2" });
+   args::Flag norm8(nomrs, "Linf", "Norm-Inf ground distance", { 'c', "l8" });
+
+   try {
+      if (argc == 1) {
+         std::cout << argv[0] << parser;
+         return EXIT_SUCCESS;
+      }
+
+      parser.ParseCLI(argc, argv);
+
+   } catch (args::Help) {
+      std::cout << parser;
+      return EXIT_SUCCESS;
+   } catch (args::ParseError e) {
+      std::cerr << e.what() << std::endl;
+      std::cerr << parser;
+      return EXIT_FAILURE;
+   } catch (args::ValidationError e) {
+      std::cerr << e.what() << std::endl;
+      std::cerr << parser;
+      return EXIT_FAILURE;
    }
 
-   if (argc == 2) {
-      all_dotmark_test();
-      exit(EXIT_SUCCESS);
+   // Start the command line options
+   try {
+      // Run massive test on DOTMARKS data set
+      if (dotmarks) {
+         all_dotmark_test();
+         exit(EXIT_SUCCESS);
+      }
+
+      // Run single test
+      if (single) {
+         std::string f1 = "data32_1001.csv";
+         std::string f2 = "data32_1002.csv";
+         if (h1_filename && h2_filename) {
+            f1 = args::get(h1_filename);
+            f2 = args::get(h2_filename);
+         }
+         GroundDistance gd = GroundDistance::L1;
+         if (norm2)
+            gd = GroundDistance::L2;
+         if (norm8)
+            gd = GroundDistance::Linf;
+
+         // Run single test
+         single_test(f1, f2, gd, exact, 1);
+
+         exit(EXIT_SUCCESS);
+      }
+   } catch (std::exception e) {
+      fprintf(stdout, "\nRuntime error: %s", e.what());
+      return EXIT_FAILURE;
    }
+
+   return EXIT_SUCCESS;
 }

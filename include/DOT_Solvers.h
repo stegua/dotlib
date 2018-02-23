@@ -19,13 +19,18 @@ namespace DOT {
 */
 int64_t compute_wdp(const Histogram2D& h1, const Histogram2D& h2, const Config& config) {
 
-	return 0;
+   return 0;
 }
 
 /**
 * @brief Compute Wasserstein distance of order 1
 */
 int64_t compute_wd1(const Histogram2D& h1, const Histogram2D& h2, const Config& config) {
+   if (h1.getN() != h2.getN()) {
+      fprintf(stdout, "ERROR: The two histograms must have the same dimension!\n");
+      return -1;
+   }
+
    if (config.algo == Algorithm::FlowSimplex) {
       if (config.ground_dist == GroundDistance::L1)
          return solve_network_L1(h1, h2);
