@@ -59,3 +59,5 @@ gurobi.log
 /msvc/DOTLib/.vs/DOTLib/v15/ipch/AutoPCH
 msvc/DOTLib/.vs/DOTLib/v15/Browse.VC.opendb
 /experiments
+msvc/DOTLib/.vs/DOTLib/v15/.suo
+msvc/DOTLib/.vs/DOTLib/v15/Browse.VC.db
