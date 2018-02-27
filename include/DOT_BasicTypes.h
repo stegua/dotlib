@@ -14,7 +14,9 @@
 #include <string>
 #include <vector>
 
+// In order to use PRId64 and PRIu64
+#include <inttypes.h>
 
 // Integer tolerance for double distances
-const int64_t INTEGER_TOL = 1000000000;
+const int64_t INTEGER_TOL = 1000000;
 

@@ -64,7 +64,7 @@ int64_t solve_network_L1(const Histogram2D& h1, const Histogram2D& h2) {
          arcs.emplace_back(g.addArc(nodes[ID(i + 1, j)], nodes[ID(i, j)]));
       }
 
-   fprintf(stdout, "Input graph created with %d nodes and %d arcs\n", countNodes(g), countArcs(g));
+   logger.info("Input graph created with %d nodes and %d arcs", countNodes(g), countArcs(g));
 
    LemonSimplex simplex(g);
 
@@ -97,13 +97,13 @@ int64_t solve_network_L1(const Histogram2D& h1, const Histogram2D& h2) {
 
    switch (ret) {
    case NetworkSimplex<LemonGraph>::INFEASIBLE:
-      fprintf(stdout, "NetworkSimplex<Graph>::INFEASIBLE\n");
+      logger.info("NetworkSimplex<Graph>::INFEASIBLE");
       break;
    case NetworkSimplex<LemonGraph>::OPTIMAL:
-      fprintf(stdout, "NetworkSimplex<Graph>::OPTIMAL\n");
+      logger.info("NetworkSimplex<Graph>::OPTIMAL");
       break;
    case NetworkSimplex<LemonGraph>::UNBOUNDED:
-      fprintf(stdout, "NetworkSimplex<Graph>::UNBOUNDED\n");
+      logger.info("NetworkSimplex<Graph>::UNBOUNDED");
       break;
    }
 
@@ -152,7 +152,7 @@ int64_t solve_network_Linf(const Histogram2D& h1, const Histogram2D& h2) {
          arcs.emplace_back(g.addArc(nodes[ID(i + 1, j)], nodes[ID(i, j + 1)]));
       }
 
-   fprintf(stdout, "Input graph created with %d nodes and %d arcs\n", countNodes(g), countArcs(g));
+   logger.info("Input graph created with %d nodes and %d arcs", countNodes(g), countArcs(g));
 
    LemonSimplex simplex(g);
 
@@ -185,13 +185,13 @@ int64_t solve_network_Linf(const Histogram2D& h1, const Histogram2D& h2) {
 
    switch (ret) {
    case NetworkSimplex<LemonGraph>::INFEASIBLE:
-      fprintf(stdout, "NetworkSimplex<Graph>::INFEASIBLE\n");
+      logger.info("NetworkSimplex<Graph>::INFEASIBLE");
       break;
    case NetworkSimplex<LemonGraph>::OPTIMAL:
-      fprintf(stdout, "NetworkSimplex<Graph>::OPTIMAL\n");
+      logger.info("NetworkSimplex<Graph>::OPTIMAL");
       break;
    case NetworkSimplex<LemonGraph>::UNBOUNDED:
-      fprintf(stdout, "NetworkSimplex<Graph>::UNBOUNDED\n");
+      logger.info("NetworkSimplex<Graph>::UNBOUNDED");
       break;
    }
 
@@ -234,7 +234,7 @@ int64_t solve_network_L2(const Histogram2D& h1, const Histogram2D& h2,
             }
          }
 
-   fprintf(stdout, "Input graph created with %d nodes and %d arcs\n", countNodes(g), countArcs(g));
+   logger.info("Input graph created with %d nodes and %d arcs", countNodes(g), countArcs(g));
 
    NetworkSimplex<LemonGraph, LimitValueType, LimitValueType> simplex(g);
 
@@ -267,17 +267,17 @@ int64_t solve_network_L2(const Histogram2D& h1, const Histogram2D& h2,
 
    switch (ret) {
    case NetworkSimplex<LemonGraph>::INFEASIBLE:
-      fprintf(stdout, "NetworkSimplex<Graph>::INFEASIBLE\n");
+      logger.info("NetworkSimplex<Graph>::INFEASIBLE");
       break;
    case NetworkSimplex<LemonGraph>::OPTIMAL:
-      fprintf(stdout, "NetworkSimplex<Graph>::OPTIMAL\n");
+      logger.info("NetworkSimplex<Graph>::OPTIMAL");
       break;
    case NetworkSimplex<LemonGraph>::UNBOUNDED:
-      fprintf(stdout, "NetworkSimplex<Graph>::UNBOUNDED\n");
+      logger.info("NetworkSimplex<Graph>::UNBOUNDED");
       break;
    }
 
-   return static_cast<int64_t>(simplex.totalCost()/INTEGER_TOL);
+   return simplex.totalCost()/INTEGER_TOL;
 }
 
 

@@ -9,6 +9,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="externs">
+      <UniqueIdentifier>{ecdb4d8a-50d7-4fa8-8570-48cd72cc9d06}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\SolverCLI.cpp">
@@ -30,6 +33,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\DOT_WD1.h">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\externs\yocta_logger.hh">
+      <Filter>externs</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

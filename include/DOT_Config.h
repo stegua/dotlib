@@ -16,11 +16,25 @@ namespace DOT {
 // Type of ground distance
 enum GroundDistance { L1=0, L2=1, Linf=2 };
 
+// Convert ground distance enum to string
+std::string gd_to_string(GroundDistance gd) {
+   if (gd == 0)
+      return "L1";
+   if (gd == 1)
+      return "L2";
+   if (gd == 2)
+      return "Linf";
+
+   return "Undefined";
+}
+
 // Solver algorithm
 enum Algorithm { FlowSimplex=0, CPLEX=1, Gurobi=2 };
 
 // In standarc C++17 it is better to use function std::gcd
-int gcd(int a, int b) {
+int gcd(int _a, int _b) {
+   int a = (_a >= 0 ? _a : -_a);
+   int b = (_b >= 0 ? _b : -_b);
    while (b != 0) {
       int t = b;
       b = a % b;
@@ -28,6 +42,13 @@ int gcd(int a, int b) {
    }
    return a;
 }
+
+#ifdef _WIN32
+const auto& GCD = static_cast<int(*)(int, int)>(std::gcd);
+#else
+#include <algorithm>
+const auto& GCD = gcd;/// static_cast<int(*)(int, int)>(std::__gcd);
+#endif
 
 /**
 * @brief Config object
@@ -39,7 +60,7 @@ class Config {
 
    // Dump of all parameters
    void dumpParameters() const {
-      fprintf(stdout, "PARAMETERS: %d\n", seed);
+      logger.info("PARAMETERS: %d", seed);
    }
 
    // Compute the list of coprimes directions as a function of L
@@ -48,7 +69,7 @@ class Config {
       coprimes.clear();
       for (int v = -L; v <= L; ++v)
          for (int w = -L; w <= L; ++w)
-            if (!(v == 0 && w == 0) && std::gcd(v, w) == 1)
+            if (!(v == 0 && w == 0) && GCD(v, w) == 1)
                coprimes.emplace_back(v, w);
       // Use as few memory as possible
       coprimes.shrink_to_fit();

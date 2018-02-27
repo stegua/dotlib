@@ -27,7 +27,7 @@ int64_t compute_wdp(const Histogram2D& h1, const Histogram2D& h2, const Config& 
 */
 int64_t compute_wd1(const Histogram2D& h1, const Histogram2D& h2, const Config& config) {
    if (h1.getN() != h2.getN()) {
-      fprintf(stdout, "ERROR: The two histograms must have the same dimension!\n");
+      logger.error("ERROR: The two histograms must have the same dimension!");
       return -1;
    }
 

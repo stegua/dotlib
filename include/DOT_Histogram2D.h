@@ -33,7 +33,7 @@ class Histogram2D {
       std::ifstream in_file(filename);
 
       if (!in_file) {
-         fprintf(stdout, "FATAL ERROR: Cannot open file %s.\n", filename.c_str());
+         logger.error("FATAL ERROR: Cannot open file %s", filename.c_str());
          exit(EXIT_FAILURE);
       }
 

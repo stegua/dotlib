@@ -11,6 +11,14 @@
 // Args parser library
 #include <args.hxx>
 
+// Yocta Logger library
+#include <yocta_logger.hh>
+
+// Global variable logger
+namespace DOT {
+yocta::Logger logger;
+}
+
 // Project includes
 #include "DOT_BasicTypes.h"
 #include "DOT_Histogram2D.h"
@@ -30,34 +38,42 @@ void single_test(
    Histogram2D h1(f1);
    Histogram2D h2(f2);
 
-   fprintf(stdout, "Total weight H1: %ld, H2: %ld\n", h1.computeTotalWeight(), h2.computeTotalWeight());
+   logger.info("Total weight H1: %ld, H2: %ld", h1.computeTotalWeight(), h2.computeTotalWeight());
 
    // Set up configuration option
    Config config;
    config.algo = Algorithm::FlowSimplex;
    config.ground_dist = gd;
 
-   if (gd == GroundDistance::L2)
+   if (gd == GroundDistance::L2) {
       if (exact) {
          int n = static_cast<int>(h1.getN());
-         config.buildCoprimes(n-1);
+         config.buildCoprimes(n - 1);
       } else
          config.buildCoprimes(L);
+      logger.info("Size of A_L: %lu", config.coprimes.size());
+   }
 
    // Time vars
-   std::chrono::time_point<std::chrono::system_clock> start, end;
-   // Start time.
-   start = std::chrono::system_clock::now();
+   using namespace std;
+   using namespace std::chrono;
+   // Start time
+   time_point<system_clock> start = system_clock::now();
 
    int64_t wd1 = compute_wd1(h1, h2, config);
 
-   end = std::chrono::system_clock::now();
-   std::chrono::duration<double> inlineTimeElapsed = end - start;
-   std::cout << "RESULT | "
-             << "Distance: " << wd1
-             << ", Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms"
-             << ", Ground: " << config.ground_dist
-             << ", " << f1 << " " << f2 << ", " << "\n";
+   // End time
+   time_point<system_clock> end = system_clock::now();
+   duration<double> inlineTimeElapsed = end - start;
+#ifdef _WIN32
+   logger.note("Distance: %I64d, Time: %ld ms, Ground: %s, %s, %s",
+               wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+               f1.c_str(), f2.c_str());
+#else
+   logger.note("Distance: %ld, Time: %ld ms, Ground: %s, %s, %s",
+               wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+               f1.c_str(), f2.c_str());
+#endif
 }
 
 
@@ -79,7 +95,7 @@ void default_test() {
    Histogram2D h1(base + dtype + SEP + f1);
    Histogram2D h2(base + dtype + SEP + f2);
 
-   fprintf(stdout, "Total weight H1: %ld, H2: %ld\n", h1.computeTotalWeight(), h2.computeTotalWeight());
+   logger.info("Total weight H1: %ld, H2: %ld", h1.computeTotalWeight(), h2.computeTotalWeight());
 
    // Set up configuration option
    Config config;
@@ -93,18 +109,27 @@ void default_test() {
    }
 
    // Time vars
-   std::chrono::time_point<std::chrono::system_clock> start, end;
-   // Start time.
-   start = std::chrono::system_clock::now();
+   using namespace std;
+   using namespace std::chrono;
+   // Start time
+   time_point<system_clock> start = system_clock::now();
 
    int64_t wd1 = compute_wd1(h1, h2, config);
 
-   end = std::chrono::system_clock::now();
-   std::chrono::duration<double> inlineTimeElapsed = end - start;
-   std::cout << "RESULT: " << dtype << " " << f1 << " " << f2 << ", "
-             << "Distance: " << wd1
-             << ", Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms,"
-             << " Ground: " << config.ground_dist << "\n";
+   // End time
+   time_point<system_clock> end = system_clock::now();
+   duration<double> inlineTimeElapsed = end - start;
+
+#ifdef _WIN32
+   logger.note("Distance: %I64d, Time: %ld ms, Ground: %s, %s, %s",
+               wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+               f1.c_str(), f2.c_str());
+#else
+   logger.note("Distance: %ld, Time: %ld ms, Ground: %s, %s, %s",
+               wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+               f1.c_str(), f2.c_str());
+#endif
+
 }
 
 // Default test: Wasserstein distance order 1, ground distance L1, two classic images
@@ -152,23 +177,29 @@ void all_dotmark_test() {
                      Histogram2D h1(base + dtype + SEP + f1);
                      Histogram2D h2(base + dtype + SEP + f2);
 
-                     fprintf(stdout, "Total weight H1: %ld, H2: %ld\n", h1.computeTotalWeight(), h2.computeTotalWeight());
+                     logger.info("Total weight H1: %ld, H2: %ld", h1.computeTotalWeight(), h2.computeTotalWeight());
 
                      // Time vars
-                     std::chrono::time_point<std::chrono::system_clock> start, end;
-                     // Start time.
-                     start = std::chrono::system_clock::now();
+                     using namespace std;
+                     using namespace std::chrono;
+                     // Start time
+                     time_point<system_clock> start = system_clock::now();
 
                      int64_t wd1 = compute_wd1(h1, h2, config);
 
-                     end = std::chrono::system_clock::now();
-                     std::chrono::duration<double> inlineTimeElapsed = end - start;
-                     std::cout << "RESULT: " << S << ", " << dtype << " " << f1 << " " << f2 << ", "
-                               << "Distance: " << wd1
-                               << ", Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(inlineTimeElapsed).count() << " ms,"
-                               << " Ground: " << config.ground_dist << "\n";
+                     // End time
+                     time_point<system_clock> end = system_clock::now();
+                     duration<double> inlineTimeElapsed = end - start;
 
-                     start = std::chrono::system_clock::now();
+#ifdef _WIN32
+                     logger.note("Distance: %I64d, Time: %ld ms, Ground: %s, %s, %s",
+                                 wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+                                 f1.c_str(), f2.c_str());
+#else
+                     logger.note("Distance: %ld, Time: %ld ms, Ground: %s, %s, %s",
+                                 wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+                                 f1.c_str(), f2.c_str());
+#endif
                   }
             }
          }
@@ -180,8 +211,9 @@ void all_dotmark_test() {
 int main(int argc, char* argv[]) {
    args::ArgumentParser parser("DOTLib v0.3.0: Discrete Optimal Transport library.", "");
    args::HelpFlag help(parser, "help", "Display this help menu", { 'h', "help" });
-   args::ValueFlag<std::string> h1_filename(parser, "h1_filename", "Filename of the first histogram", { 'f', "h1" });
-   args::ValueFlag<std::string> h2_filename(parser, "h2_filename", "Filename of the second histogram", { 'g', "h2" });
+   args::ValueFlag<std::string> h1_filename(parser, "h1_filename", "filename of the first histogram", { 'f', "h1" });
+   args::ValueFlag<std::string> h2_filename(parser, "h2_filename", "filename of the second histogram", { 'g', "h2" });
+   args::ValueFlag<std::string> log_filename(parser, "log_filename", "logger filename", { 'l', "log" });
 
    args::ValueFlag<int> sides(parser, "sides", "Dimension of the subgrid size L", { 'L', "sides" });
 
@@ -217,6 +249,9 @@ int main(int argc, char* argv[]) {
 
    // Start the command line options
    try {
+      if (log_filename)
+         logger.setFileStream(args::get(log_filename));
+
       // Run massive test on DOTMARKS data set
       if (dotmarks) {
          all_dotmark_test();
@@ -243,7 +278,7 @@ int main(int argc, char* argv[]) {
          exit(EXIT_SUCCESS);
       }
    } catch (std::exception e) {
-      fprintf(stdout, "\nRuntime error: %s", e.what());
+      logger.error("Runtime error: %s", e.what());
       return EXIT_FAILURE;
    }
 
