@@ -150,7 +150,7 @@ void all_dotmark_test() {
                                    "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"
                                  };
 
-   std::vector<std::string> Ss = { "32", "64", "128", "256", "512" };
+   std::vector<std::string> Ss = { "32" };//, "64", "128", "256", "512" };
 
    std::vector<GroundDistance> Gs = { GroundDistance::L1, GroundDistance::Linf, GroundDistance::L2 };
 
@@ -166,6 +166,8 @@ void all_dotmark_test() {
             int n = static_cast<int>(atoi(S.c_str()));
             // Id using L2, must compute a list of coprimes number
             config.buildCoprimes(n - 1);
+//         } else {
+//            config.buildCoprimes(2);
          }
          for (const auto& dtype : dirs) {
             for (const auto& f11 : Fs) {
@@ -192,14 +194,15 @@ void all_dotmark_test() {
                      duration<double> inlineTimeElapsed = end - start;
 
 #ifdef _WIN32
-                     logger.note("Distance: %I64d, Time: %ld ms, Ground: %s, %s, %s",
+                     logger.note("Distance: %I64d, Time: %ld ms, Ground: %s, %s, %s, %s",
                                  wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
-                                 f1.c_str(), f2.c_str());
+                                 f1.c_str(), f2.c_str(), dtype);
 #else
-                     logger.note("Distance: %ld, Time: %ld ms, Ground: %s, %s, %s",
+                     logger.note("Distance: %ld, Time: %ld ms, Ground: %s, %s, %s, %s",
                                  wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
-                                 f1.c_str(), f2.c_str());
+                                 f1.c_str(), f2.c_str(), dtype);
 #endif
+		     logger.flush();
                   }
             }
          }
