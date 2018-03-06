@@ -64,3 +64,9 @@ msvc/DOTLib/.vs/DOTLib/v15/Browse.VC.db
 /prova.log
 /solver
 /Makefile.dev
+
+# My files
+solver*
+*.log
+myJob*
+launch*
