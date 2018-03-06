@@ -75,16 +75,12 @@ class Config {
       coprimes.shrink_to_fit();
    }
 
-
    // Seed for random generator device
    int seed;
-
    // Ground distance
    GroundDistance ground_dist;
-
    // Type of algorithm for the solver
    Algorithm algo;
-
    // List of pair of coprimes number between (-L, L)
    std::vector<std::pair<int, int>> coprimes;
 };

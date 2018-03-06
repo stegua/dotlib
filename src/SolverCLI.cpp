@@ -216,6 +216,7 @@ int main(int argc, char* argv[]) {
    args::ValueFlag<std::string> log_filename(parser, "log_filename", "logger filename", { 'l', "log" });
 
    args::ValueFlag<int> sides(parser, "sides", "Dimension of the subgrid size L", { 'L', "sides" });
+   args::ValueFlag<int> verbosity(parser, "verbosity", "Verbosity level of logger", { 'v', "ver" });
 
    args::Flag dotmarks(parser, "dotmarks", "Run massive tests on DotMarks instances", { 'd', "dotmarks" });
    args::Flag single(parser, "single", "Run single test between two histograms", { 's', "single" });
@@ -249,8 +250,11 @@ int main(int argc, char* argv[]) {
 
    // Start the command line options
    try {
+      // Set logger first
       if (log_filename)
          logger.setFileStream(args::get(log_filename));
+      if (verbosity)
+         logger.setVerbosityLevel(static_cast<yocta::VerbosityLevel>(args::get(verbosity)));
 
       // Run massive test on DOTMARKS data set
       if (dotmarks) {
