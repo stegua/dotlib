@@ -18,6 +18,9 @@ To build the library from C++ source, you need the following external libraries:
 
 * [Lemon Graph Library](http://lemon.cs.elte.hu/trac/lemon)
 
+## Reference
+[1] Bassetti F., Gualandi S., Veneroni M. *On the Computation of Kantorovich-Wasserstein Distances between 2D-Histograms by Uncapacitated Minimum Cost Flows*, [arXiv](https://arxiv.org/abs/1804.00445), April, 2nd,  2018.
+
 
 ### MIT License
 Copyright (c) 2017, 2018 Stefano Gualandi
