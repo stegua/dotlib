@@ -76,6 +76,45 @@ void single_test(
 #endif
 }
 
+// Default test: Wasserstein distance order 1, ground distance L1, two classic images
+void single_test_bipartite_W2(
+   const std::string& f1,
+   const std::string& f2,
+   const GroundDistance& gd
+) {
+   Histogram2D h1(f1);
+   Histogram2D h2(f2);
+
+   logger.info("Total weight H1: %ld, H2: %ld", h1.computeTotalWeight(), h2.computeTotalWeight());
+
+   // Set up configuration option
+   Config config;
+   config.algo = Algorithm::NetworkSimplexTripartite;
+   if (gd == GroundDistance::L1)
+      config.algo = Algorithm::NetworkSimplexBipartite;
+
+   // Time vars
+   using namespace std;
+   using namespace std::chrono;
+   // Start time
+   time_point<system_clock> start = system_clock::now();
+
+   int64_t wd = compute_wd2(h1, h2, config);
+
+   // End time
+   time_point<system_clock> end = system_clock::now();
+   duration<double> inlineTimeElapsed = end - start;
+#ifdef _WIN32
+   logger.note("Distance: %I64d, Time: %ld ms, Ground: %s, %s, %s",
+               wd, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+               f1.c_str(), f2.c_str());
+#else
+   logger.note("Distance: %ld, Time: %ld ms, Ground: %s, %s, %s",
+               wd, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+               f1.c_str(), f2.c_str());
+#endif
+}
+
 
 // Default test: Wasserstein distance order 1, ground distance L1, two classic images
 void default_test() {
@@ -179,7 +218,7 @@ void all_dotmark_test() {
                      Histogram2D h1(base + dtype + SEP + f1);
                      Histogram2D h2(base + dtype + SEP + f2);
 
-                     logger.info("Total weight H1: %ld, H2: %ld", h1.computeTotalWeight(), h2.computeTotalWeight());
+                     logger.debug("Total weight H1: %ld, H2: %ld", h1.computeTotalWeight(), h2.computeTotalWeight());
 
                      // Time vars
                      using namespace std;
@@ -193,16 +232,9 @@ void all_dotmark_test() {
                      time_point<system_clock> end = system_clock::now();
                      duration<double> inlineTimeElapsed = end - start;
 
-#ifdef _WIN32
                      logger.note("Distance: %I64d, Time: %ld ms, Ground: %s, %s, %s, %s",
                                  wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
-                                 f1.c_str(), f2.c_str(), dtype);
-#else
-                     logger.note("Distance: %ld, Time: %ld ms, Ground: %s, %s, %s, %s",
-                                 wd1, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
-                                 f1.c_str(), f2.c_str(), dtype);
-#endif
-		     logger.flush();
+                                 dtype.c_str(), f1.c_str(), f2.c_str());
                   }
             }
          }
@@ -280,7 +312,8 @@ int main(int argc, char* argv[]) {
             gd = GroundDistance::Linf;
 
          // Run single test
-         single_test(f1, f2, gd, exact, 1);
+         //single_test(f1, f2, gd, exact, 1);
+         single_test_bipartite_W2(f1, f2, gd);
 
          exit(EXIT_SUCCESS);
       }

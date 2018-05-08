@@ -164,7 +164,7 @@ class Logger {
       since_epoch -= s;
       milliseconds milli = duration_cast<milliseconds>(since_epoch);
       // dump the string
-      fprintf(stream, "%s.%.3ld %s %s\n", date, milli.count(), msg, message.c_str());
+      fprintf(stream, "%s.%.3" PRId64 " %s %s\n", date, milli.count(), msg, message.c_str());
    }
 };
 

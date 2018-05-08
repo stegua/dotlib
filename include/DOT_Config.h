@@ -29,7 +29,7 @@ std::string gd_to_string(GroundDistance gd) {
 }
 
 // Solver algorithm
-enum Algorithm { FlowSimplex=0, CPLEX=1, Gurobi=2 };
+enum Algorithm { FlowSimplex=0, NetworkSimplexBipartite=1, NetworkSimplexTripartite = 2, CPLEX=3, Gurobi=4 };
 
 // In standarc C++17 it is better to use function std::gcd
 int gcd(int _a, int _b) {

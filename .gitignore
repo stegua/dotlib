@@ -70,3 +70,4 @@ solver*
 *.log
 myJob*
 launch*
+/externs/yocta_logger_old.hh
