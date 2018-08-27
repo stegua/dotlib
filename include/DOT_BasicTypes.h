@@ -13,6 +13,9 @@
 #include <cassert>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
 
 // In order to use PRId64 and PRIu64
 #include <inttypes.h>

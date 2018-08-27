@@ -31,6 +31,22 @@ std::string gd_to_string(GroundDistance gd) {
 // Solver algorithm
 enum Algorithm { FlowSimplex=0, NetworkSimplexBipartite=1, NetworkSimplexTripartite = 2, CPLEX=3, Gurobi=4 };
 
+// Convert ground distance enum to string
+std::string algo_to_string(Algorithm al) {
+   if (al == 0)
+      return "FlowSimplex";
+   if (al == 1)
+      return "NetworkSimplexBipartite";
+   if (al == 2)
+      return "NetworkSimplexTripartite";
+   if (al == 3)
+      return "CPLEX";
+   if (al == 4)
+      return "Gurobi";
+
+   return "Undefined";
+}
+
 // In standarc C++17 it is better to use function std::gcd
 int gcd(int _a, int _b) {
    int a = (_a >= 0 ? _a : -_a);

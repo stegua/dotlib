@@ -22,6 +22,7 @@ yocta::Logger logger;
 // Project includes
 #include "DOT_BasicTypes.h"
 #include "DOT_Histogram2D.h"
+#include "DOT_Histogram.h"
 #include "DOT_Solvers.h"
 
 
@@ -105,14 +106,118 @@ void single_test_bipartite_W2(
    time_point<system_clock> end = system_clock::now();
    duration<double> inlineTimeElapsed = end - start;
 #ifdef _WIN32
-   logger.note("Distance: %I64d, Time: %ld ms, Ground: %s, %s, %s",
-               wd, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+   logger.note("Distance: %I64d, %f, Time: %ld ms, Ground: %s, %s, %s",
+               wd, double(wd)/(h1.computeTotalWeight())*32*32/(h1.getN()*h1.getN()), duration_cast<milliseconds>(inlineTimeElapsed).count(),
+               gd_to_string(config.ground_dist).c_str(),
                f1.c_str(), f2.c_str());
 #else
-   logger.note("Distance: %ld, Time: %ld ms, Ground: %s, %s, %s",
-               wd, duration_cast<milliseconds>(inlineTimeElapsed).count(), gd_to_string(config.ground_dist).c_str(),
+   logger.note("Distance: %ld, %f, Time: %ld ms, Ground: %s, %s, %s",
+               wd, double(wd) / (h1.computeTotalWeight())* 32*32 / (h1.getN()*h1.getN()), duration_cast<milliseconds>(inlineTimeElapsed).count(),
+               gd_to_string(config.ground_dist).c_str(),
                f1.c_str(), f2.c_str());
 #endif
+}
+
+// Default test: Wasserstein distance order 1, ground distance L1, two classic images
+void single_test_flowcytometry_W2(
+   const std::string& f1,
+   const std::string& f2,
+   const GroundDistance& gd,
+   size_t n,
+   size_t d
+) {
+   Histogram h1(f1, n, d);
+   Histogram h2(f2, n, d);
+
+   logger.info("Total weight H1: %ld, H2: %ld", h1.computeTotalWeight(), h2.computeTotalWeight());
+
+   // Set up configuration option
+   Config config;
+   config.algo = Algorithm::NetworkSimplexTripartite;
+   if (gd == GroundDistance::L1)
+      config.algo = Algorithm::NetworkSimplexBipartite;
+
+   // Time vars
+   using namespace std;
+   using namespace std::chrono;
+   // Start time
+   time_point<system_clock> start = system_clock::now();
+
+   int64_t wd = compute_wd2_fcs(h1, h2, config);
+
+   // End time
+   time_point<system_clock> end = system_clock::now();
+   duration<double> inlineTimeElapsed = end - start;
+#ifdef _WIN32
+   logger.note("Distance: %I64d, %f, Time: %ld ms, Ground: %s, %s, %s",
+               wd, double(wd) / (h1.computeTotalWeight()) * 32 * 32 / (h1.getN()*h1.getN()), duration_cast<milliseconds>(inlineTimeElapsed).count(),
+               gd_to_string(config.ground_dist).c_str(),
+               f1.c_str(), f2.c_str());
+#else
+   logger.note("Distance: %ld, %f, Time: %ld ms, Ground: %s, %s, %s",
+               wd, double(wd) / (h1.computeTotalWeight()) * 32 * 32 / (h1.getN()*h1.getN()), duration_cast<milliseconds>(inlineTimeElapsed).count(),
+               gd_to_string(config.ground_dist).c_str(),
+               f1.c_str(), f2.c_str());
+#endif
+}
+
+// Default test: Wasserstein distance order 1, ground distance L1, two classic images
+void all_test_bipartite_W2() {
+   // Base test
+   std::string base = "D:\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
+   std::string SEP = "\\";
+#ifdef CINECA
+   base = "../data/DOTmark/";
+   SEP = "/";
+#endif
+
+   std::vector<std::string> dirs = { "ClassicImages", "MicroscopyImages", "Shapes" };
+
+   std::vector<std::string> Fs = { "1001.csv", "1002.csv", "1003.csv", "1004.csv", "1005.csv",
+                                   "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"
+                                 };
+
+   std::vector<std::string> Ss = { "32", "64", "128" };
+   Config config;
+
+   for (const auto& algo : {
+   Algorithm::NetworkSimplexTripartite, Algorithm::NetworkSimplexBipartite
+}) {
+      config.algo = algo;
+      for (const auto& S : Ss) {
+         for (const auto& dtype : dirs) {
+            for (const auto& f11 : Fs) {
+               for (const auto& f22 : Fs)
+                  if (f11 < f22) {
+                     std::string f1 = "data" + S + "_" + f11;
+                     std::string f2 = "data" + S + "_" + f22;
+
+                     Histogram2D h1(base + dtype + SEP + f1);
+                     Histogram2D h2(base + dtype + SEP + f2);
+
+                     logger.debug("Total weight H1: %ld, H2: %ld", h1.computeTotalWeight(), h2.computeTotalWeight());
+
+                     // Time vars
+                     using namespace std;
+                     using namespace std::chrono;
+                     // Start time
+                     time_point<system_clock> start = system_clock::now();
+
+                     int64_t wd = compute_wd2(h1, h2, config);
+
+                     // End time
+                     time_point<system_clock> end = system_clock::now();
+                     duration<double> inlineTimeElapsed = end - start;
+
+                     logger.note("Distance: %I64d %f, Time: %ld ms, Algo: %s, %s, %s, %s",
+                                 wd, double(wd) / (h1.computeTotalWeight()) * 32 * 32 / (h1.getN()*h1.getN()),
+                                 duration_cast<milliseconds>(inlineTimeElapsed).count(), algo_to_string(algo).c_str(),
+                                 dtype.c_str(), f1.c_str(), f2.c_str());
+                  }
+            }
+         }
+      }
+   }
 }
 
 
@@ -242,6 +347,59 @@ void all_dotmark_test() {
    }
 }
 
+// Default test: Wasserstein distance order 1, ground distance L1, two classic images
+void all_fcs_test() {
+   // Base test
+   std::string base = "D:\\Ricerca\\DOTA\\data\\AML\\CSV\\";
+   std::string SEP = "\\";
+
+   std::vector<std::string> Fs = { "0001.csv", "0009.csv", "0017.csv", "0025.csv", "0033.csv",
+                                   "0041.csv", "0049.csv", "0057.csv", "0065.csv", "0201.csv"
+                                 };
+
+   std::vector<Algorithm> Gs = { DOT::Algorithm::NetworkSimplexBipartite };
+
+   std::vector<size_t> Ds = { 2, 3 };
+
+   int n = 32;
+
+   // Set up configuration option
+   Config config;
+
+   for (Algorithm gd : Gs) {
+      config.algo = gd;
+      for (const auto& d : Ds)
+         if (!(d == 4 && gd == Algorithm::NetworkSimplexBipartite)) {
+            for (const auto& f1 : Fs) {
+               for (const auto& f2 : Fs)
+                  if (f1 < f2) {
+                     Histogram h1(base + SEP + f1, n, d);
+                     Histogram h2(base + SEP + f2, n, d);
+
+                     logger.debug("Total weight H1: %ld, H2: %ld", h1.computeTotalWeight(), h2.computeTotalWeight());
+
+                     // Time vars
+                     using namespace std;
+                     using namespace std::chrono;
+                     // Start time
+                     time_point<system_clock> start = system_clock::now();
+
+                     int64_t wd = compute_wd2_fcs(h1, h2, config);
+
+                     // End time
+                     time_point<system_clock> end = system_clock::now();
+                     duration<double> inlineTimeElapsed = end - start;
+
+                     logger.note("Distance: %I64d, Time: %ld ms, n: %d, d: %d, Algo: %s, %s, %s",
+                                 wd, duration_cast<milliseconds>(inlineTimeElapsed).count(), int(n), int(d),
+                                 algo_to_string(config.algo).c_str(),
+                                 f1.c_str(), f2.c_str());
+                  }
+            }
+         }
+   }
+}
+
 // Main entry point
 int main(int argc, char* argv[]) {
    args::ArgumentParser parser("DOTLib v0.3.0: Discrete Optimal Transport library.", "");
@@ -313,7 +471,10 @@ int main(int argc, char* argv[]) {
 
          // Run single test
          //single_test(f1, f2, gd, exact, 1);
-         single_test_bipartite_W2(f1, f2, gd);
+
+         // FCS - NIPS 2018
+         //single_test_flowcytometry_W2(f1,f2,gd);
+         all_fcs_test();
 
          exit(EXIT_SUCCESS);
       }

@@ -4,6 +4,8 @@
 * @author stefano.gualandi@gmail.com (Stefano Gualandi)
 */
 
+#pragma once
+
 #include <string>
 #include <chrono>
 #include <memory>
@@ -11,6 +13,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+
+#include <fstream>
+#include <sstream>
 
 // In order to use PRId64
 #include <inttypes.h>
@@ -30,6 +35,22 @@ std::string fmt(const std::string& format, Args ... args) {
    std::unique_ptr<char[]> buf(new char[size]);
    snprintf(buf.get(), size, format.c_str(), args ...);
    return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
+}
+
+
+// Read a text file and store it in a unique string
+std::string readTextFile(const std::string& filename) {
+   std::ifstream in(filename, std::ios::in | std::ios::binary);
+   if (in) {
+      std::string doc;
+      in.seekg(0, std::ios::end);
+      doc.resize(in.tellg());
+      in.seekg(0, std::ios::beg);
+      in.read(&doc[0], doc.size());
+      in.close();
+      return doc;
+   }
+   throw std::runtime_error("File not found: " + filename);
 }
 
 // Verbosity levels

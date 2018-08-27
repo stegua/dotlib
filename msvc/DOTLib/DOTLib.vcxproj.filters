@@ -40,5 +40,11 @@
     <ClInclude Include="..\..\include\DOT_WD2.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\DOT_Histogram.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\externs\args.hxx">
+      <Filter>externs</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
