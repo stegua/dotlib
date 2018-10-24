@@ -34,7 +34,7 @@ def W1(H1, H2):
 
     # Build model
     m = Model()
-    m.setParam(GRB.Param.OutputFlag, 0)
+    m.setParam(GRB.Param.OutputFlag, 1)
     #m.setParam(GRB.Param.Method, 1)
     #m.setParam(GRB.Param.Threads, 7)
     #m.setParam(GRB.Param.NumericFocus, 1)
@@ -146,17 +146,17 @@ def Euclidean(H1, H2):
 
     return euclidean(H1, H2)    
     
-def kNN(H, Bs):
-    Ls = list(map(lambda B: W1(H[1:], B), Bs))
+def kNN(H, Bs, Is, F):
+    Ls = list(map(lambda B: F(H[1:], B), Bs))
     best_i = 0
     best_d = Ls[0]
     for i,d in enumerate(Ls):
         if d < best_d:
             best_i = i
             best_d = d
-    print('True:', int(H[0]), ' ===> Predict:', best_i)
-    if int(H[0]) != best_i:
-        print(Ls)
+    print('True:', int(H[0]), ' ===> Predict:', Is[best_i], ' Distance:', best_d)
+    
+    if int(H[0]) != Is[best_i]:
         f, axarr = plt.subplots(1, 2)
         A = np.array(H[1:]).reshape(28,28)
         axarr[0].imshow(A, cmap='coolwarm')
@@ -166,20 +166,40 @@ def kNN(H, Bs):
         plt.tight_layout()
         plt.show()
 
-    return int((int(H[0])-best_i) == 0)
+    return int((int(H[0])-Is[best_i]) == 0)
     
-
+from scipy import ndimage
+def Augment(Bs, lb, ub):
+    Rs = []
+    Is = []
+    for d, b in enumerate(Bs):
+        A = np.array(b.reshape(28,28))
+        for i in range(lb,ub):
+            B = ndimage.rotate(A, angle=5*i, reshape=False)
+            B = B/np.matrix.sum(np.matrix(B))
+            C = ndimage.grey_dilation(B, size=(2,2))
+            C = C/np.matrix.sum(np.matrix(C))
+            D = ndimage.grey_erosion(B, size=(2,2))
+            D = D/np.matrix.sum(np.matrix(D))
+            Rs.append(list(map(lambda x: max(0,x), list(B.flatten()))))
+            Rs.append(list(map(lambda x: max(0,x), list(C.flatten()))))
+            Rs.append(list(map(lambda x: max(0,x), list(D.flatten()))))
+            Is.append(d)
+            Is.append(d)
+            Is.append(d)
+    return Rs, Is
 #------------------------------------------
 #              MAIN ENTRY POINT
 #------------------------------------------
 if __name__ == "__main__":
-    #barycenters = genfromtxt('E:\\GitHub\\dotlib\\data\\barycenter_Euclidean.csv', delimiter=',')
-    barycenters = genfromtxt('E:\\GitHub\\dotlib\\data\\barycenter_L2_all.csv', delimiter=',')
+    barycenters = genfromtxt('E:\\GitHub\\dotlib\\data\\barycenter_Euclidean.csv', delimiter=',')
+    #barycenters = genfromtxt('E:\\GitHub\\dotlib\\data\\barycenter_L2_all.csv', delimiter=',')
     
-    n = 20
+    n = 25
     testset = genfromtxt('E:\\GitHub\\dotlib\\data\\test_classify_knn.csv', delimiter=',', skip_header=1, max_rows=n+1)
     
     accuracy = 0 
     for t in testset[:n]:
-        accuracy += kNN(t, barycenters)
-    print('Accurcay:', round(accuracy/n*100, 3))
+        Bs, Is = Augment(barycenters, -2, 3)
+        accuracy += kNN(t, Bs, Is, Euclidean)
+    print('Accurcay:', round(accuracy/n*100, 3), accuracy)

@@ -46,5 +46,8 @@
     <ClInclude Include="..\..\externs\args.hxx">
       <Filter>externs</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\DOT_CG.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
