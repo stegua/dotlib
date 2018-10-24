@@ -1,4 +1,4 @@
-/**
+/*
 * @fileoverview Copyright (c) 2017-18, Stefano Gualandi,
 *               via Ferrata, 1, I-27100, Pavia, Italy
 *
@@ -24,7 +24,7 @@ yocta::Logger logger;
 #include "DOT_Histogram2D.h"
 #include "DOT_Histogram.h"
 #include "DOT_Solvers.h"
-
+#include "DOT_CG.h"
 
 using namespace DOT;
 
@@ -400,6 +400,20 @@ void all_fcs_test() {
    }
 }
 
+// Column Generation test
+void column_generation_test() {
+   int n = 128;
+   int seed = 13;
+   auto X = uniformSpace2D(n, ++seed);
+   auto Y = uniformSpace2D(n, ++seed);
+
+   auto PI = randomMarginal(n*n, 255, ++seed);
+   auto MU = randomMarginal(n*n, 255, ++seed);
+
+   ColumnGeneration(X, PI, Y, MU);
+}
+
+
 // Main entry point
 int main(int argc, char* argv[]) {
    args::ArgumentParser parser("DOTLib v0.3.0: Discrete Optimal Transport library.", "");
@@ -414,6 +428,7 @@ int main(int argc, char* argv[]) {
    args::Flag dotmarks(parser, "dotmarks", "Run massive tests on DotMarks instances", { 'd', "dotmarks" });
    args::Flag single(parser, "single", "Run single test between two histograms", { 's', "single" });
    args::Flag exact(parser, "exact", "When using the L2 norm as ground distance, solve the exact problem", { 'e', "exact" });
+   args::Flag colgen(parser, "columnGeneration", "Solve the problem by column generation", { 'z', "colgen" });
 
    args::Group nomrs(parser, "This group is all exclusive:", args::Group::Validators::AtMostOne);
    args::Flag norm1(nomrs, "L1", "Norm-1 ground distance", { 'a', "l1" });
@@ -452,6 +467,12 @@ int main(int argc, char* argv[]) {
       // Run massive test on DOTMARKS data set
       if (dotmarks) {
          all_dotmark_test();
+         exit(EXIT_SUCCESS);
+      }
+
+      // Run Column Generation Algorithm
+      if (colgen) {
+         column_generation_test();
          exit(EXIT_SUCCESS);
       }
 
