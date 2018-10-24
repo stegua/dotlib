@@ -70,3 +70,5 @@ solver*
 *.log
 myJob*
 launch*
+/externs/yocta_logger_old.hh
+/msvc/DOTLib/x64/Debug

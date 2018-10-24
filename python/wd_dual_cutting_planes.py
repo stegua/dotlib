@@ -16,7 +16,8 @@ def ComputeDistanceMatrix(n, p=2):
             C[i,j] = {}
             for v in range(n):
                 for w in range(n):
-                    C[i,j][v,w] = pow(abs(i - v)**p + abs(j - w)**p, 1/p)
+                    #C[i,j][v,w] = pow(abs(i - v)**p + abs(j - w)**p, 1/p)
+                    C[i,j][v,w] = abs(i - v)**p + abs(j - w)**p
     
     return C
 
@@ -30,7 +31,7 @@ def WassersteinDualCutting(h1, h2, M):
 
     # Build model
     m = Model()
-    m.setParam(GRB.Param.TimeLimit, 300)
+    #m.setParam(GRB.Param.TimeLimit, 300)
     #m.setParam(GRB.Param.Presolve,    0)    
     #m.setParam(GRB.Param.Threads,     1)
     #  Options are: 
@@ -56,17 +57,19 @@ def WassersteinDualCutting(h1, h2, M):
     print('2. Add initial constraint sets')
     for i,j in P:
         for v,w in P:
-            if M[i,j][v,w] <= 16.001: # Threshold for first set of constraints
-                m.addConstr(V[i,j] + U[v,w], GRB.LESS_EQUAL, M[i,j][v,w])    
-        
-    print('3. Start Cutting planes')
+            #if M[i,j][v,w] <= 16.001: # Threshold for first set of constraints
+            m.addConstr(V[i,j] + U[v,w], GRB.LESS_EQUAL, M[i,j][v,w])    
+
+    # Solve plain model        
+    m.optimize()
+
     # Solve the model
+    print('3. Start Cutting planes')
     it = 0
     stime = 0
-    while True:
+    while False: # set to true to test the method
         it += 1
         m.optimize()
-        break
         stime += m.RunTime
         flag = True        
         max_depth = 0
@@ -96,9 +99,9 @@ if __name__ == "__main__":
     filename1 = 'D:\Ricerca\DOTA\data\DOTmark_1.0\Data\ClassicImages\data32_1001.csv'
     M1 = np.loadtxt(open(filename1, "rb"), delimiter=",")
 
-    filename2 = 'D:\Ricerca\DOTA\data\DOTmark_1.0\Data\ClassicImages\data32_1003.csv'
+    filename2 = 'D:\Ricerca\DOTA\data\DOTmark_1.0\Data\ClassicImages\data32_1002.csv'
     M2 = np.loadtxt(open(filename2, "rb"), delimiter=",")
 
-    C = ComputeDistanceMatrix(len(M1),p=1)
+    C = ComputeDistanceMatrix(len(M1),p=2)
     
     print(WassersteinDualCutting(M1, M2, C))

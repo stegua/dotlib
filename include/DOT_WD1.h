@@ -242,7 +242,7 @@ int64_t solve_network_L2(const Histogram2D& h1, const Histogram2D& h2,
    ListDigraph::ArcMap<LimitValueType> l_i(g), u_i(g);
    ListDigraph::ArcMap<LimitValueType> c_i(g);
 
-   // FLow balance
+   // Flow balance
    ListDigraph::NodeMap<LimitValueType> b_i(g);
    {
       size_t idx = 0;

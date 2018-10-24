@@ -11,6 +11,7 @@
 #include "DOT_Histogram2D.h"
 #include "DOT_Config.h"
 #include "DOT_WD1.h"
+#include "DOT_WD2.h"
 
 namespace DOT {
 
@@ -40,6 +41,42 @@ int64_t compute_wd1(const Histogram2D& h1, const Histogram2D& h2, const Config& 
          return solve_network_L2(h1, h2, config.coprimes);
       }
    }
+   return -1;
+}
+
+/**
+* @brief Compute Wasserstein distance of order 2
+*/
+int64_t compute_wd2(const Histogram2D& h1, const Histogram2D& h2, const Config& config) {
+   if (h1.getN() != h2.getN()) {
+      logger.error("ERROR: The two histograms must have the same dimension!");
+      return -1;
+   }
+
+   if (config.algo == Algorithm::NetworkSimplexBipartite)
+      return solve_bipartite_network_L2(h1, h2);
+   if (config.algo == Algorithm::NetworkSimplexTripartite)
+      return solve_tripartite_network_L2(h1, h2);
+
+
+   return -1;
+}
+
+/**
+* @brief Compute Wasserstein distance of order 2 for flowcytometry data
+*/
+int64_t compute_wd2_fcs(const Histogram& h1, const Histogram& h2, const Config& config) {
+   if (h1.getN() != h2.getN()) {
+      logger.error("ERROR: The two histograms must have the same dimension!");
+      return -1;
+   }
+
+   if (config.algo == Algorithm::NetworkSimplexBipartite)
+      return solve_bipartite_network_L2_fcs(h1, h2);
+   if (config.algo == Algorithm::NetworkSimplexTripartite)
+      return solve_tripartite_network_L2_fcs(h1, h2);
+
+
    return -1;
 }
 

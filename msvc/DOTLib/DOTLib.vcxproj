@@ -69,9 +69,13 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>C:\gurobi800\win64\include;$(SolutionDir)..\..\include;$(SolutionDir)..\..\externs;C:\DevLIBs\lemon\lemon-1.3.1;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\gurobi800\win64\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)..\..\externs;$(SolutionDir)..\..\include;C:\DevLIBs\lemon\lemon-1.3.1;$(IncludePath)</IncludePath>
+    <IncludePath>C:\gurobi800\win64\include;$(SolutionDir)..\..\externs;$(SolutionDir)..\..\include;C:\DevLIBs\lemon\lemon-1.3.1;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\gurobi800\win64\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -93,7 +97,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\DevLIBs\lemon\lemon-1.3.1\build\lemon\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>lemon.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lemon.lib;gurobi80.lib;gurobi_c++mdd2017.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -104,6 +108,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -114,30 +119,38 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <StringPooling>true</StringPooling>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>C:\DevLIBs\lemon\lemon-1.3.1\build\lemon\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>lemon.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lemon.lib;gurobi80.lib;gurobi_c++mdd2017.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\SolverCLI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\externs\args.hxx" />
     <ClInclude Include="..\..\externs\yocta_logger.hh" />
     <ClInclude Include="..\..\include\DOT_BasicTypes.h" />
+    <ClInclude Include="..\..\include\DOT_CG.h" />
     <ClInclude Include="..\..\include\DOT_Config.h" />
     <ClInclude Include="..\..\include\DOT_Histogram2D.h" />
+    <ClInclude Include="..\..\include\DOT_Histogram.h" />
     <ClInclude Include="..\..\include\DOT_Solvers.h" />
+    <ClInclude Include="..\..\include\DOT_WD2.h" />
     <ClInclude Include="..\..\include\DOT_WD1.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
