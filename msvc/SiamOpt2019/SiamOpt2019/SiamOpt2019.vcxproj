@@ -20,9 +20,9 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{20F95D40-28A6-4D6E-A14A-A29A855CA0D8}</ProjectGuid>
-    <RootNamespace>DOTLib</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <ProjectGuid>{06648D54-D3AB-4BE8-B88A-1BF0B33BDEF1}</ProjectGuid>
+    <RootNamespace>SiamOpt2019</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -70,12 +70,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\gurobi800\win64\include;$(SolutionDir)..\..\include;$(SolutionDir)..\..\externs;C:\DevLIBs\lemon\lemon-1.3.1;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\gurobi800\win64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\Gualandi\Documents\GitHub\dotlib\externs\LingOkada;C:\Users\Gualandi\Documents\GitHub\dotlib\externs\RubnerEMD;C:\gurobi810\win64\include;C:\Users\Gualandi\Documents\GitHub\dotlib\externs;C:\Users\Gualandi\Documents\GitHub\dotlib\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\gurobi810\win64\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Solvers\gurobi801\win64\include;$(SolutionDir)..\..\externs;$(SolutionDir)..\..\include;C:\DevLIBs\lemon\lemon-1.3.1;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Solvers\gurobi801\win64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\Gualandi\Documents\GitHub\dotlib\externs\LingOkada;C:\Users\Gualandi\Documents\GitHub\dotlib\externs\RubnerEMD;C:\DevLIBs\lemon\lemon-1.3.1;C:\gurobi810\win64\include;C:\Users\Gualandi\Documents\GitHub\dotlib\externs;C:\Users\Gualandi\Documents\GitHub\dotlib\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\gurobi810\win64\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -91,13 +91,12 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>C:\DevLIBs\lemon\lemon-1.3.1\build\lemon\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>lemon.lib;gurobi80.lib;gurobi_c++mdd2017.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lemon.lib;gurobi81.lib;gurobi_c++mdd2017.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\DevLIBs\lemon\lemon-1.3.1\build\lemon\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -108,7 +107,6 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -119,39 +117,38 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <FloatingPointModel>Fast</FloatingPointModel>
-      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
-      <StringPooling>true</StringPooling>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>lemon.lib;gurobi81.lib;gurobi_c++mdd2017.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\DevLIBs\lemon\lemon-1.3.1\build\lemon\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>lemon.lib;gurobi80.lib;gurobi_c++mdd2017.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\SolverCLI.cpp" />
+    <ClInclude Include="..\..\..\externs\catch.hpp" />
+    <ClInclude Include="..\..\..\externs\LingOkada\emdL1.h" />
+    <ClInclude Include="..\..\..\externs\RubnerEMD\emd.h" />
+    <ClInclude Include="..\..\..\include\DOT_BipartiteGurobi.hpp" />
+    <ClInclude Include="..\..\..\include\DOT_BipartiteLemon.hpp" />
+    <ClInclude Include="..\..\..\include\DOT_KWD_P1.hpp" />
+    <ClInclude Include="..\..\..\include\DOT_MeasureR2.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\externs\args.hxx" />
-    <ClInclude Include="..\..\externs\yocta_logger.hh" />
-    <ClInclude Include="..\..\include\DOT_BasicTypes.h" />
-    <ClInclude Include="..\..\include\DOT_CG.h" />
-    <ClInclude Include="..\..\include\DOT_Config.h" />
-    <ClInclude Include="..\..\include\DOT_Histogram2D.h" />
-    <ClInclude Include="..\..\include\DOT_Histogram.h" />
-    <ClInclude Include="..\..\include\DOT_Solvers.h" />
-    <ClInclude Include="..\..\include\DOT_WD2.h" />
-    <ClInclude Include="..\..\include\DOT_WD1.h" />
+    <ClCompile Include="..\..\..\externs\LingOkada\emdL1.cpp" />
+    <ClCompile Include="..\..\..\externs\RubnerEMD\emd.cc" />
+    <ClCompile Include="..\..\..\src\DOT_BGV.cpp" />
+    <ClCompile Include="..\..\..\src\DOT_BipartiteEMD.cpp" />
+    <ClCompile Include="..\..\..\src\DOT_EMD_L1.cpp" />
+    <ClCompile Include="..\..\..\src\DOT_BipartiteLemon.cpp" />
+    <ClCompile Include="..\..\..\src\DOT_CLI.cpp" />
+    <ClCompile Include="..\..\..\src\DOT_MeasureR2.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

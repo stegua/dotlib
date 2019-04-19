@@ -491,11 +491,11 @@ int main(int argc, char* argv[]) {
             gd = GroundDistance::Linf;
 
          // Run single test
-         //single_test(f1, f2, gd, exact, 1);
+         single_test(f1, f2, gd, exact, 1);
 
          // FCS - NIPS 2018
          //single_test_flowcytometry_W2(f1,f2,gd);
-         all_fcs_test();
+         //all_fcs_test();
 
          exit(EXIT_SUCCESS);
       }

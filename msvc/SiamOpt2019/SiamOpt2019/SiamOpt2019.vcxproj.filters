@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="externs">
+      <UniqueIdentifier>{1dc236e3-3afe-4628-868d-0bd99f9dc501}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\externs\catch.hpp">
+      <Filter>externs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_BipartiteGurobi.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_BipartiteLemon.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_MeasureR2.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\externs\RubnerEMD\emd.h">
+      <Filter>externs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\externs\LingOkada\emdL1.h">
+      <Filter>externs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_KWD_P1.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\src\DOT_CLI.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DOT_BipartiteLemon.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\externs\RubnerEMD\emd.cc">
+      <Filter>externs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DOT_BipartiteEMD.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\externs\LingOkada\emdL1.cpp">
+      <Filter>externs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DOT_EMD_L1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DOT_BGV.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DOT_MeasureR2.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
