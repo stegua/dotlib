@@ -72,3 +72,8 @@ myJob*
 launch*
 /externs/yocta_logger_old.hh
 /msvc/DOTLib/x64/Debug
+/msvc/SiamOpt2019/.vs/SiamOpt2019/v15
+/msvc/SiamOpt2019/SiamOpt2019/x64/Release
+/msvc/SiamOpt2019/x64/Release
+/msvc/ConvOT/.vs/ConvOT/v15
+/msvc/ConvOT
