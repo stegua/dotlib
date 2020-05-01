@@ -5,7 +5,7 @@
 *     @fileoverview Copyright (c) 2017-19, Stefano Gualandi,
 *               via Ferrata, 1, I-27100, Pavia, Italy
 *
-*  Last update: April, 2019
+*  Last update: May, 2019
 */
 
 
@@ -67,12 +67,12 @@ TEST_CASE("BIPARTITE_LEMON_SIMPLEX") {
                                      //"LogGRF", "LogitGRF", "MicroscopyImages", "Shapes",
                                    };
 
-   std::vector<std::string> Fs = { "1001.csv", "1002.csv", //"1003.csv", //"1004.csv", "1005.csv",
-                                   //"1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"
+   std::vector<std::string> Fs = { "1001.csv", "1002.csv", "1003.csv", "1004.csv", "1005.csv",
+                                   "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"
                                  };
 
    std::vector<std::string> Ss = {
-      "32", "64"
+      "64"
    };
 
    for (const auto& S : Ss) {
@@ -87,6 +87,8 @@ TEST_CASE("BIPARTITE_LEMON_SIMPLEX") {
                   DOT::MeasureR2 Nu(base + dtype + SEP + f2);
 
                   DOT::BipartiteNetworkSimplex(Mu, Nu, 0, dtype + " " + f11 + " " + f22 + " " + S + " LEMON_NS");
+                  DOT::BipartiteNetworkSimplex(Mu, Nu, 1, dtype + " " + f11 + " " + f22 + " " + S + " LEMON_NS");
+                  DOT::BipartiteNetworkSimplex(Mu, Nu, 2, dtype + " " + f11 + " " + f22 + " " + S + " LEMON_NS");
                }
          }
       }
@@ -286,7 +288,8 @@ TEST_CASE("BGV_L2") {
                                  };
 
    std::vector<std::string> Ss = {
-      "32", "64", "128",
+      //"32", "64",
+      "128",
    };
 
    for (const auto& S : Ss) {

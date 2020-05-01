@@ -26,6 +26,9 @@ const double INTEGER_TOL = 1000000;
 
 // Distance function between a pair of point in R^k
 #define DISTANCE_R2(x, y)  std::round(sqrt((x[0] - y[0])*(x[0] - y[0]) + (x[1] - y[1])*(x[1] - y[1]))*INTEGER_TOL)
+#define DISTANCE_R1(x, y)  fabs(x[0] - y[0]) + fabs(x[1] - y[1])
+#define DISTANCE_Rinf(x, y)  std::max<>(fabs(x[0] - y[0]), fabs(x[1] - y[1]))
+
 //#define DISTANCE_R2(x, y)  (x[0] - y[0])*(x[0] - y[0]) + (x[1] - y[1])*(x[1] - y[1])
 
 

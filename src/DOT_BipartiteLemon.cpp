@@ -56,7 +56,13 @@ void DOT::BipartiteNetworkSimplex(const MeasureR2& Mu, const MeasureR2& Nu, int 
    for (int i = 0; i < m; ++i)
       for (int j = 0; j < n; ++j) {
          arcs.emplace_back(g.addArc(V[i], W[j]));
-         a_costs.emplace_back(static_cast<LimitValueType>(DISTANCE_R2(Mu.getP(i), Nu.getP(j))));
+         if (algo == 0)
+            a_costs.emplace_back(static_cast<LimitValueType>(DISTANCE_Rinf(Mu.getP(i), Nu.getP(j))));
+         if (algo == 1)
+            a_costs.emplace_back(static_cast<LimitValueType>(DISTANCE_R1(Mu.getP(i), Nu.getP(j))));
+         if (algo == 2)
+            a_costs.emplace_back(static_cast<LimitValueType>(DISTANCE_R2(Mu.getP(i), Nu.getP(j))));
+
       }
 
    NetworkSimplex<LemonGraph, LimitValueType, LimitValueType> simplex(g);
@@ -93,8 +99,8 @@ void DOT::BipartiteNetworkSimplex(const MeasureR2& Mu, const MeasureR2& Nu, int 
    double elapsed = double(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) / 1000;
 
    int64_t fobj = simplex.totalCost();
-   fprintf(stdout, "%s %d %d Runtime %.6f Value %" PRId64 " status %d\n",
-           msg.c_str(), n, countArcs(g), elapsed, fobj, status);
+   fprintf(stdout, "%s %d %d Runtime %.6f Value %" PRId64 " status %d algo%d\n",
+           msg.c_str(), n, countArcs(g), elapsed, fobj, status, algo);
 
    fflush(stdout);
 }
