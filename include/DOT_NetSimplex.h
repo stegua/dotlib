@@ -210,21 +210,14 @@ namespace DOT {
 			// 2*n arcs from nodes to root and from root to node;
 			// 2*n-1 nodes in a basic solution
 			int max_arc_num = 2 * _node_num + arc_num + 1;
-			_source.reserve(max_arc_num);
-			_target.reserve(max_arc_num);
+			_source.resize(max_arc_num);
+			_target.resize(max_arc_num);
 
-			_cost.reserve(max_arc_num);
-			_flow.reserve(max_arc_num);
-			_state.reserve(max_arc_num);
+			_cost.resize(max_arc_num, 0);
+			_flow.resize(max_arc_num, 0);
+			_state.resize(max_arc_num, STATE_LOWER);
 
 			// Dummy arcs for eavery node to root node
-			_source.resize(_node_num);
-			_target.resize(_node_num);
-
-			_cost.resize(_node_num, 1);
-			_flow.resize(_node_num, 0);
-			_state.resize(_node_num, STATE_LOWER);
-
 			_dummy_arc = _node_num;
 			_arc_num = _node_num;
 			_next_arc = _dummy_arc;
@@ -268,10 +261,14 @@ namespace DOT {
 
 		Cost totalCost() const {
 			Cost c = 0;
+			Cost tot_flow = 0;
 			for (int e = _dummy_arc; e < _arc_num; ++e)
-				if (_source[e] != _root && _target[e] != _root) c += _flow[e] * _cost[e];
+				if (_source[e] != _root && _target[e] != _root) {
+					c += _flow[e] * _cost[e];
+					tot_flow += _flow[e];
+				}
 
-			return c;
+			return c / tot_flow;
 		}
 
 		Cost potential(int n) const { return _pi[n]; }

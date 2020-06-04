@@ -14,7 +14,11 @@ COMPILER    = g++ ${OPTFLAG}
 LINKER      = g++ ${LDFLAGS}
 
 solver::
-	${COMPILER} -o solver.o -c ./src/SolverW1L2.cpp -I./include/
+	${COMPILER} -o solver.o -c ./src/SolverW1L2.cpp -I./include/ -I./externs
+	${LINKER} -o solver ./solver.o
+
+convex::
+	${COMPILER} -DCONVEXHULL -o solver.o -c ./src/SolverW1L2.cpp -I./include/ -I./externs
 	${LINKER} -o solver ./solver.o
 
 test::
