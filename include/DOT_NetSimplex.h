@@ -237,16 +237,16 @@ namespace DOT {
 
 		void addNode(int i, Value b) { _supply[i] = b; }
 
-		void addArc(int a, int b, Cost c) {
-			_source.emplace_back(a);
-			_target.emplace_back(b);
-			_cost.emplace_back(c);
+		//void addArc(int a, int b, Cost c) {
+		//	_source.emplace_back(a);
+		//	_target.emplace_back(b);
+		//	_cost.emplace_back(c);
 
-			_flow.emplace_back(0);
-			_state.emplace_back(STATE_LOWER);
+		//	_flow.emplace_back(0);
+		//	_state.emplace_back(STATE_LOWER);
 
-			_arc_num++;
-		}
+		//	_arc_num++;
+		//}
 
 		void setArc(int idx, int a, int b, Cost c) {
 			_source[_dummy_arc + idx] = a;
@@ -640,7 +640,7 @@ namespace DOT {
 
 				//fprintf(stdout, "updatePotential\n");
 				updatePotential();
-				if (it % 10 == 0)
+				if (it % 1000 == 0)
 					fprintf(stdout, "Iter %d: Cost=%f\n", it, totalCost());
 				it++;
 			}
