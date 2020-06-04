@@ -624,6 +624,7 @@ namespace DOT {
 			PivotRuleImpl pivot(*this);
 
 			// Execute the Network Simplex algorithm
+			int it = 0;
 			while (pivot.findEnteringArc()) {
 				//fprintf(stdout, "findjoin\n");
 				findJoinNode();
@@ -639,7 +640,11 @@ namespace DOT {
 
 				//fprintf(stdout, "updatePotential\n");
 				updatePotential();
+				if (it % 10 == 0)
+					fprintf(stdout, "Iter %d: Cost=%f\n", it, totalCost());
+				it++;
 			}
+			fprintf(stdout, "Iter %d: Cost=%f\n", it, totalCost());
 
 			return OPTIMAL;
 		}
