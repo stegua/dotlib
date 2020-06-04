@@ -7,8 +7,8 @@
 # @author stefano.gualandi@gmail.com (Stefano Gualandi)
 #----------------------------------------------------------
 
-OPTFLAG = -O2 -ffast-math -DNDEBUG -Wall -std=c++17 -DLINUX
-LDFLAGS = -O2 -DNDEBUG -pthread -std=c++17 -lm
+OPTFLAG = -O2 -ffast-math -DNDEBUG -Wall -std=c++17 -DLINUX -fopenmp
+LDFLAGS = -O2 -DNDEBUG -pthread -std=c++17 -lm -fopenmp
 
 COMPILER    = g++ ${OPTFLAG}
 LINKER      = g++ ${LDFLAGS}
