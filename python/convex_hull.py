@@ -67,7 +67,7 @@ def FilterAxis(Ps):
             Bs.append(l[0])
             if l[-1] != l[0]:
                 Bs.append(l[-1])
-                
+        
     # Then filter according to the second axis
     m = max([p[1] for p in Bs])+1
     
@@ -128,7 +128,7 @@ def ConvexHull(Ps):
 
     # Preprocessing    
     Cs = FilterAxis(Ps)
-    
+
     # Find anchor point
     min_idx = None
     for i, (x,y) in enumerate(Cs):
@@ -167,7 +167,6 @@ def WalkGrid(p0, p1):
         for x in range(min(p0[0], p1[0]), max(p0[0], p1[0])):
             ps.append((x, p1[1]))
         return ps
-
     
     nx = abs(dx)
     ny = abs(dy)
@@ -207,7 +206,6 @@ def FillHull(Ps):
     
     Rs = []
     for x in X:
-        print(x)
         ymin, ymax = X[x]
         for y in range(ymin, ymax+1):
             Rs.append((x,y))
@@ -222,7 +220,7 @@ if __name__ == "__main__":
     np.random.seed(13)
     #Ps = [(int(x), int(y)) for x,y in np.random.multivariate_normal([20,20], [[10,5],[5,10]], 2000)]
     #RandomGridPoint(20, 20, 100)
-    Ps = [(2,3), (3,7), (1,4)]
+    Ps = [(2,3), (3,9), (1,6), (1,4), (2,4), (3,4),(3,5),(3,6)]
     Hull = ConvexHull(Ps)
     
     PlotPoints(Ps, Hull)

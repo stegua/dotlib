@@ -1,5 +1,5 @@
 #----------------------------------------------------------
-# DOTLib v0.4.0: Discrete Optimal Transport library
+# DOTLib v0.5.0: Discrete Optimal Transport library
 #
 # @fileoverview Copyright (c) 2017-20, Stefano Gualandi,
 #               via Ferrata, 1, I-27100, Pavia, Italy
