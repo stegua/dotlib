@@ -100,8 +100,8 @@ def Distance(a, b=None):
     return y_span**2 +  x_span**2
 
 def Det(a, b, c):
-    return  (b[0] - a[0]) * (c[1] - a[1]) \
-           -(b[1] - a[1]) * (c[0] - a[0])
+        return  (b[0] - a[0]) * (c[1] - a[1]) \
+               -(b[1] - a[1]) * (c[0] - a[0])
     
 def PolarQuickSort(Ls):
     if len(Ls) <= 1: return Ls

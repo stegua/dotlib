@@ -650,7 +650,7 @@ namespace DOT {
 
 				//fprintf(stdout, "updatePotential\n");
 				updatePotential();
-				if (it % 100000 == 0)
+				if (it % 1000000 == 0)
 					fprintf(stdout, "Iter %d: Cost=%f\n", it, totalCost());
 				it++;
 			}

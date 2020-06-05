@@ -281,6 +281,11 @@ void solver_W1L2_hull(const std::string& filename, int L, int off) {
 	typedef double FlowType;
 	typedef double CostType;
 
+	// Float:
+	// 2020-06-05 19:29 : 52.157[NOTE] Distance : 2.259609, Time : 180938 ms
+	// double:
+	// 2020-06-05 19:16:12.482 [NOTE ] Distance: 2.259553, Time: 211288 ms
+
 	// Build the graph for min cost flow
 	NetSimplex<FlowType, CostType> simplex(n, n * Co);
 
