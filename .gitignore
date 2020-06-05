@@ -84,3 +84,4 @@ launch*
 /data/testfile2stegua_2.dat.zip
 /data/testfile2stegua_4.dat
 /data/testfile2stegua_4.dat.zip
+*.gz

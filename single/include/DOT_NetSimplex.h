@@ -217,7 +217,6 @@ namespace DOT {
 			_flow.reserve(max_arc_num);
 			_state.reserve(max_arc_num);
 
-			// Dummy arcs for eavery node to root node
 			_source.resize(_node_num);
 			_target.resize(_node_num);
 
@@ -225,6 +224,7 @@ namespace DOT {
 			_flow.resize(_node_num, 0);
 			_state.resize(_node_num, STATE_LOWER);
 
+			// Dummy arcs for eavery node to root node
 			_dummy_arc = _node_num;
 			_arc_num = _node_num;
 			_next_arc = _dummy_arc;
@@ -255,23 +255,26 @@ namespace DOT {
 			_arc_num++;
 		}
 
-		void setArc(int idx, int a, int b, Cost c) {
-			_source[_dummy_arc + idx] = a;
-			_target[_dummy_arc + idx] = b;
-			_cost[_dummy_arc + idx] = c;
-
-			_flow[_dummy_arc + idx] = 0;
-			_state[_dummy_arc + idx] = STATE_LOWER;
-
-			_arc_num++;
-		}
-
 		Cost totalCost() const {
 			Cost c = 0;
+			Cost tot_flow = 0;
 			for (int e = _dummy_arc; e < _arc_num; ++e)
-				if (_source[e] != _root && _target[e] != _root) c += _flow[e] * _cost[e];
+				if (_source[e] != _root && _target[e] != _root) {
+					c += _flow[e] * _cost[e];
+					tot_flow += _flow[e];
+				}
 
 			return c;
+		}
+
+		Cost totalFlow() const {
+			Cost tot_flow = 0;
+			for (int e = _dummy_arc; e < _arc_num; ++e)
+				if (_source[e] != _root && _target[e] != _root) {
+					tot_flow += _flow[e];
+				}
+
+			return tot_flow;
 		}
 
 		Cost potential(int n) const { return _pi[n]; }
@@ -280,7 +283,7 @@ namespace DOT {
 		ProblemType checkFeasibility() {
 			for (int e = 0; e != _dummy_arc; ++e)
 				if (_flow[e] != 0) {
-					fprintf(stdout, "ERROR: flow on dummy arcs\n");
+					fprintf(stdout, "ERROR: flow on dummy arcs: %f\n", _flow[e]);
 					return INFEASIBLE;
 				}
 			return OPTIMAL;
@@ -319,7 +322,10 @@ namespace DOT {
 				_sum_supply += _supply[i];
 			}
 
-			//assert(fabs(_sum_supply) <= 1e-16);
+			if (fabs(_sum_supply) > 1e-7) {
+				fprintf(stdout, "Total mass: %f\n", _sum_supply);
+				exit(0);
+			}
 
 			// Initialize artifical cost
 			Cost ART_COST;
@@ -626,7 +632,9 @@ namespace DOT {
 		ProblemType start() {
 			PivotRuleImpl pivot(*this);
 
+			fprintf(stdout, "%d %d %d\n", _node_num, _arc_num, (int)_source.size());
 			// Execute the Network Simplex algorithm
+			int it = 0;
 			while (pivot.findEnteringArc()) {
 				//fprintf(stdout, "findjoin\n");
 				findJoinNode();
@@ -642,7 +650,12 @@ namespace DOT {
 
 				//fprintf(stdout, "updatePotential\n");
 				updatePotential();
+				if (it % 1000000 == 0)
+					fprintf(stdout, "Iter %d: Cost=%f\n", it, totalCost());
+				it++;
 			}
+			fprintf(stdout, "Iter %d: Cost=%f, Flow=%f, isFeasible: %d\n",
+				it, totalCost(), totalFlow(), checkFeasibility());
 
 			return OPTIMAL;
 		}

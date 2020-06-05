@@ -112,6 +112,17 @@ public:
 		}
 	}
 
+	// Normalize data
+	void normalize() {
+		double tot = 0.0;
+		for (double w : data)
+			tot += w;
+
+		for (double& w : data)
+			w = w / tot;
+	}
+
+
 	// Sum over all bins
 	double computeTotalWeight() const {
 		double t = 0;
@@ -165,6 +176,8 @@ void solver_W1L2(const std::string& f1, const std::string& f2, int L) {
 	// Readin input histograms
 	Histogram2D h1(f1);
 	Histogram2D h2(f2);
+	h1.normalize();
+	h2.normalize();
 
 	int s = h1.getN();
 	int n = s * s;

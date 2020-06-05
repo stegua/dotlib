@@ -1,5 +1,5 @@
 #----------------------------------------------------------
-# DOTLib v0.4.0: Discrete Optimal Transport library
+# DOTLib v0.5.0: Discrete Optimal Transport library
 #
 # @fileoverview Copyright (c) 2017-20, Stefano Gualandi,
 #               via Ferrata, 1, I-27100, Pavia, Italy
@@ -16,6 +16,10 @@ LINKER      = g++ ${LDFLAGS}
 solver::
 	${COMPILER} -o solver.o -c ./src/SolverW1L2.cpp -I./include/
 	${LINKER} -o solver ./solver.o
+
+convex::
+	./solver -s data/convex_test.csv -L 2
+	./solver -f data/convex_1.csv -g data/convex_2.csv -L 2
 
 test::
 	./solver -f data/test1.csv -g data/test3.csv -L 1 
