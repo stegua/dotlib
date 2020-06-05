@@ -194,7 +194,8 @@ void solver_W1L2(const std::string& f1, const std::string& f2, int L) {
 				int v = p.first;
 				int w = p.second;
 				if (i + v >= 0 && i + v < s && j + w >= 0 && j + w < s) {
-					simplex.setArc(m++, ID(i, j), ID(i + v, j + w), sqrt(pow(v, 2) + pow(w, 2)));
+					simplex.addArc(ID(i, j), ID(i + v, j + w), sqrt(pow(v, 2) + pow(w, 2)));
+					m++;
 				}
 			}
 
@@ -224,7 +225,7 @@ void solver_W1L2(const std::string& f1, const std::string& f2, int L) {
 }
 
 // Default test: Wasserstein distance order 1, ground distance L2, two classic images
-void solver_W1L2_hull(const std::string& filename, int L) {
+void solver_W1L2_hull(const std::string& filename, int L, int off) {
 	logger.note("Parameter L = %d", L);
 
 	// List of pair of coprimes number between (-L, L)
@@ -240,7 +241,7 @@ void solver_W1L2_hull(const std::string& filename, int L) {
 	logger.note("Computed: %d coprimes", (int)coprimes.size());
 
 	// Read input data
-	PointCloud2D ps = parse(filename);
+	PointCloud2D ps = parse(filename, ' ', off);
 	logger.note("File in memory, with %d bins. Start convex hull computation", (int)ps.size());
 	// Compute convex hull
 	ConvexHull ch;
@@ -296,7 +297,8 @@ void solver_W1L2_hull(const std::string& filename, int L) {
 			int w = p.second;
 			if (i + v >= 0 && i + v < xmax && j + w >= 0 && j + w < ymax && M[ID(i + v, j + w)]) {
 				int ff = H[ID(i + v, j + w)];
-				simplex.setArc(m++, h, ff, sqrt(pow(v, 2) + pow(w, 2)));
+				simplex.addArc(h, ff, sqrt(pow(v, 2) + pow(w, 2)));
+				m++;
 			}
 		}
 	}
@@ -366,6 +368,7 @@ int main(int argc, char* argv[]) {
 	args::ValueFlag<std::string> log_filename(parser, "log_filename", "logger filename", { 'l', "log" });
 
 	args::ValueFlag<int> side(parser, "side", "Dimension of the subgrid size L", { 'L', "sides" });
+	args::ValueFlag<int> offset(parser, "off", "Offset for coordinates", { 'O', "off" });
 	args::ValueFlag<int> verbosity(parser, "verbosity", "Verbosity level of logger", { 'v', "ver" });
 
 	args::Group nomrs(parser, "This group is all exclusive:", args::Group::Validators::AtMostOne);
@@ -407,10 +410,13 @@ int main(int argc, char* argv[]) {
 		int L = 2;
 		if (side)
 			L = args::get(side);
+		int O = 0;
+		if (offset)
+			O = args::get(offset);
 
 		if (s_filename) {
 			std::string s1 = args::get(s_filename);
-			solver_W1L2_hull(s1, L);
+			solver_W1L2_hull(s1, L, O);
 		}
 		else {
 			std::string f1 = "data32_1001.csv";

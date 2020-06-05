@@ -34,16 +34,28 @@ namespace DOT {
 			B.resize(B.size() - 1);
 		}
 
+		void remove(int x, int y) {
+			auto p = std::make_pair(x, y);
+			if (M.find(p) != M.end()) {
+				size_t i = M.at(p);
+				std::swap(X[i], X.back());
+				std::swap(Y[i], Y.back());
+				std::swap(B[i], B.back());
+				X.pop_back();
+				Y.pop_back();
+				B.pop_back();
+				M.erase(p);
+			}
+		}
+
 		void reserve(size_t t) {
 			X.reserve(t);
 			Y.reserve(t);
 			B.reserve(t);
 		}
 
-		void resize(size_t t) {
-			X.resize(t);
-			Y.resize(t);
-			B.resize(t);
+		void pop_back() {
+			remove(X.back(), Y.back());
 		}
 
 		void shrink_to_fit() {
@@ -52,30 +64,13 @@ namespace DOT {
 			B.shrink_to_fit();
 		}
 
-		void addFill(int x, int y, float b = 0.0) {
-			X.push_back(x);
-			Y.push_back(y);
-			B.push_back(b);
-			//M.emplace(x, y);
-		}
-
-		void addX(int x) {
-			X.emplace_back(x);
-		}
-		void addY(int y) {
-			Y.emplace_back(y);
-		}
-		void addB(float b = 0) {
-			B.emplace_back(b);
-		}
-
-		void add(int x, int y, float b = 0.0) {
+		void add(int x, int y, double b = 0.0) {
 			auto p = std::make_pair(x, y);
 			if (M.find(p) == M.end()) {
+				M[p] = X.size();
 				X.push_back(x);
 				Y.push_back(y);
 				B.push_back(b);
-				M.insert(p);
 			}
 		}
 
@@ -85,115 +80,26 @@ namespace DOT {
 		void setY(size_t i, int y) {
 			Y[i] = y;
 		}
-		void setB(size_t i, float b) {
+		void setB(size_t i, double b) {
 			B[i] = b;
-		}
-
-		// Sort for coordinates
-		void sort() {
-			quickSort(0, X.size() - 1);
-		}
-
-		void quickSort(int low, int high)
-		{
-			/// Ref:  https://www.geeksforgeeks.org/quick-sort/
-			if (low < high) {
-				int pi = partition(low, high);
-
-				// Separately sort elements before  
-				// partition and after partition  
-				quickSort(low, pi - 1);
-				quickSort(pi + 1, high);
-			}
-		}
-
-		void swap(int i, int j)
-		{
-			std::swap(X[i], X[j]);
-			std::swap(Y[i], Y[j]);
-			std::swap(B[i], B[j]);
-		}
-
-		int partition(int low, int high)
-		{
-			int pivotX = X[high];
-			int pivotY = Y[high];
-
-			int i = (low - 1); // Index of smaller element  
-
-			for (int j = low; j <= high - 1; j++)
-			{
-				// If current element is smaller than the pivot  
-				if (X[j] < pivotX || (X[j] == pivotX && Y[j] < pivotY))
-				{
-					i++; // increment index of smaller element  
-					swap(i, j);
-				}
-			}
-			swap(i + 1, high);
-
-			return (i + 1);
-		}
-
-		// Remove double entries with same pair of (x,y) coordinates
-		void unique() {
-			size_t i = 0;
-			size_t j = 1;
-			size_t last = X.size();
-			if (last < 1)
-				return;
-
-			// First sort all the points
-			sort();
-			// Loop for removal of cosecutive equal elements
-			while (j < last) {
-				if (X[i] == X[j] && Y[i] == Y[j])
-					j++;
-				else {
-					X[i + 1] = X[j];
-					Y[i + 1] = Y[j];
-					B[i + 1] = B[j];
-					i++;
-					j++;
-				}
-			}
-			// Resize removing the last entris.
-			resize(i + 1);
-			shrink_to_fit();
 		}
 
 		// Merge all the points contained in "other" into this object.
 		// The node balance are taken from the "other" object.
-		void merge(PointCloud2D& other) {
-			sort();
-			other.sort();
+		void merge(const PointCloud2D& other) {
+			std::unordered_map< std::pair<int, int>, size_t > O = other.getM();
 
-			size_t a = 0;
-			size_t b = 0;
-			size_t a_max = X.size();
-			size_t b_max = other.size();
-
-			while (a < a_max && b < b_max) {
-				if (X[a] == other.getX(b)) {
-					if (Y[a] == other.getY(b)) {
-						B[a] = other.getB(b);
-						a++;
-						b++;
-					}
-					else {
-						if (Y[a] < other.getY(b))
-							a++;
-						else
-							b++;
-					}
+			for (const auto& p : O) {
+				size_t j = p.second;
+				if (M.find(p.first) != M.end()) {
+					size_t i = M.at(p.first);
+					B[i] = other.getB(j);
 				}
 				else {
-					if (X[a] < other.getX(b))
-						a++;
-					else
-						b++;
+					fprintf(stdout, "point missing: %d %d\n", p.first.first, p.first.second);
 				}
 			}
+
 		}
 
 		void append(const PointCloud2D& other) {
@@ -201,13 +107,21 @@ namespace DOT {
 				add(other.getX(i), other.getY(i), other.getB(i));
 		}
 
+		double balance() {
+			double t = 0;
+			for (size_t i = 0, i_max = B.size(); i < i_max; ++i)
+				t += B[i];
+			return t;
+		}
+
+
 		bool empty() const {
 			return X.empty();
 		}
 
 		int getX(size_t i) const { return X[i]; }
 		int getY(size_t i) const { return Y[i]; }
-		float getB(size_t i) const { return B[i]; }
+		double getB(size_t i) const { return B[i]; }
 
 		size_t size(void) const { return X.size(); }
 
@@ -220,19 +134,21 @@ namespace DOT {
 			fflush(stdout);
 		}
 
+		const std::unordered_map< std::pair<int, int>, size_t >& getM() const { return M; }
+
 	private:
 		// Point coordinates (integers)
 		std::vector<int> X;
 		std::vector<int> Y;
-
+		// Pair to indices
+		std::unordered_map< std::pair<int, int>, size_t > M;
 		// Node balance
-		std::vector<float> B;
+		std::vector<double> B;
 
-		std::unordered_set< std::pair<int, int> > M;
 	};
 
 	// Parse data from file, with format: i j b1 b1
-	PointCloud2D parse(const std::string& filename, char sep = ' ') {
+	PointCloud2D parse(const std::string& filename, char sep = ' ', int off = 0) {
 		std::ifstream in_file(filename);
 
 		if (!in_file) {
@@ -241,12 +157,12 @@ namespace DOT {
 		}
 
 		PointCloud2D Rs;
-		std::vector<float> Bs;
+		std::vector<double> Bs;
 		std::string         line;
 
 		// Read first line
-		float tot_a = 0;
-		float tot_b = 0;
+		double tot_a = 0;
+		double tot_b = 0;
 		while (std::getline(in_file, line)) {
 			std::stringstream   lineStream(line);
 			std::string         cell;
@@ -256,15 +172,15 @@ namespace DOT {
 			std::getline(lineStream, cell, sep);
 			int y = std::stoi(cell);
 			std::getline(lineStream, cell, sep);
-			float a = std::stof(cell);
+			double a = std::stof(cell);
 			std::getline(lineStream, cell, sep);
-			float b = std::stof(cell);
+			double b = std::stof(cell);
 
 			if (fabs(a - b) > 1e-10) {
 				tot_a += a;
 				tot_b += b;
-				// Check if grid start in position 1 or 0
-				Rs.add(x, y, a);
+				// Check if grid start in position 1 or 0 with parameter "off"
+				Rs.add(x - off, y - off, a);
 				Bs.emplace_back(b);
 			}
 		};
@@ -274,8 +190,15 @@ namespace DOT {
 		// Use as few memory as possible
 		Rs.shrink_to_fit();
 		// normalize data (rescaling)
-		for (size_t i = 0, i_max = Bs.size(); i < i_max; ++i)
-			Rs.setB(i, Rs.getB(i) - Bs[i] * tot_a / tot_b);
+		if (Rs.size() != Bs.size())
+			exit(0);
+		double tot = 0;
+		for (size_t i = 0, i_max = Bs.size(); i < i_max; ++i) {
+			tot += Rs.getB(i) / tot_a - Bs[i] / tot_b;
+			Rs.setB(i, Rs.getB(i) / tot_a - Bs[i] / tot_b);
+		}
+
+		fprintf(stdout, "tot flow: %f\n", tot);
 
 		return Rs;
 	}
@@ -311,6 +234,7 @@ namespace DOT {
 		int Det(int ax, int ay, int bx, int by, int cx, int cy) const {
 			return  (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
 		}
+
 
 		PointCloud2D PolarQuickSort(PointCloud2D& Ls) {
 			if (Ls.size() <= 1)
@@ -398,7 +322,6 @@ namespace DOT {
 		PointCloud2D find(const PointCloud2D& Ps) {
 			// Preprocessing
 			auto Cs = FilterAxis(Ps);
-
 			// Find anchor point
 			int min_idx = -1;
 			for (size_t i = 0, i_max = Cs.size(); i < i_max; ++i) {
@@ -410,30 +333,24 @@ namespace DOT {
 
 			anchor_x = Cs.getX(min_idx);
 			anchor_y = Cs.getY(min_idx);
+			Cs.remove(anchor_x, anchor_y);
 
 			PointCloud2D Ss = PolarQuickSort(Cs);
-			//		del Ss[Ss.index(anchor)];
 
 			PointCloud2D Hull;
 			Hull.add(anchor_x, anchor_y);
-
-			int idx = 0;
-			while ((anchor_x == Ss.getX(idx) && anchor_y == Ss.getY(idx)))
-				idx++;
-
-			Hull.add(Ss.getX(idx), Ss.getY(idx));
-			size_t cur = 2;
-			for (size_t i = idx + 1, i_max = Ss.size(); i < i_max; ++i) {
+			Hull.add(Ss.getX(0), Ss.getY(0));
+			for (size_t i = 1, i_max = Ss.size(); i < i_max; ++i) {
+				int cur = Hull.size();
 				while (Det(Hull.getX(cur - 2), Hull.getY(cur - 2),
 					Hull.getX(cur - 1), Hull.getY(cur - 1),
 					Ss.getX(i), Ss.getY(i)) <= 0) {
-					Hull.resize(cur - 1);
-					cur--;
+					Hull.pop_back();
 					if (Hull.size() < 2)
 						break;
+					cur = Hull.size();
 				}
 				Hull.add(Ss.getX(i), Ss.getY(i));
-				cur++;
 			}
 
 			// Add all points along the convex hull
@@ -496,13 +413,12 @@ namespace DOT {
 
 		// Find all the point in the interior of the convex hull
 		PointCloud2D FillHull(const PointCloud2D& Ps) const {
-			int x_max = 0;
+			int x_max = -1;
 			for (size_t i = 0, i_max = Ps.size(); i < i_max; ++i)
 				x_max = std::max(x_max, Ps.getX(i));
-			x_max++;
 
-			std::vector<int> Xmin(x_max, std::numeric_limits<int>::max());
-			std::vector<int> Xmax(x_max, 0);
+			std::vector<int> Xmin(x_max + 1, std::numeric_limits<int>::max());
+			std::vector<int> Xmax(x_max + 1, -1);
 
 			for (size_t i = 0, i_max = Ps.size(); i < i_max; ++i) {
 				int x = Ps.getX(i);
@@ -510,29 +426,15 @@ namespace DOT {
 				Xmax[x] = std::max(Xmax[x], Ps.getY(i));
 			}
 
-			size_t tt = 0;
-			for (int i = 0; i < x_max; ++i)
-				if (Xmin[i] != std::numeric_limits<int>::max())
-					tt += Xmax[i] + 1 - Xmin[i];
-				else
-					Xmax[i] = Xmin[i];
+			for (int i = 0; i < x_max + 1; ++i)
+				if (Xmin[i] == std::numeric_limits<int>::max() || Xmax[i] == -1)
+					exit(-1);
 
 			PointCloud2D Rs;
-			Rs.resize(tt);
-			Rs.shrink_to_fit();
-			int idx = 0;
-			for (int x = 0; x < x_max; ++x) {
-				for (size_t y = Xmin[x], y_max = Xmax[x]; y < y_max; ++y)
-					Rs.setX(idx++, x);
-			}
-			idx = 0;
-			for (int x = 0; x < x_max; ++x)
-				for (size_t y = Xmin[x], y_max = Xmax[x]; y < y_max; ++y)
-					Rs.setY(idx++, y);
-			idx = 0;
-			for (int x = 0; x < x_max; ++x)
-				for (size_t y = Xmin[x], y_max = Xmax[x]; y < y_max; ++y)
-					Rs.setB(idx++, 0);
+			for (int x = 0; x < x_max + 1; ++x)
+				for (size_t y = Xmin[x], y_max = Xmax[x] + 1; y < y_max; ++y)
+					Rs.add(x, y);
+
 			return Rs;
 		}
 

@@ -210,12 +210,19 @@ namespace DOT {
 			// 2*n arcs from nodes to root and from root to node;
 			// 2*n-1 nodes in a basic solution
 			int max_arc_num = 2 * _node_num + arc_num + 1;
-			_source.resize(max_arc_num);
-			_target.resize(max_arc_num);
+			_source.reserve(max_arc_num);
+			_target.reserve(max_arc_num);
 
-			_cost.resize(max_arc_num, 0);
-			_flow.resize(max_arc_num, 0);
-			_state.resize(max_arc_num, STATE_LOWER);
+			_cost.reserve(max_arc_num);
+			_flow.reserve(max_arc_num);
+			_state.reserve(max_arc_num);
+
+			_source.resize(_node_num);
+			_target.resize(_node_num);
+
+			_cost.resize(_node_num, 1);
+			_flow.resize(_node_num, 0);
+			_state.resize(_node_num, STATE_LOWER);
 
 			// Dummy arcs for eavery node to root node
 			_dummy_arc = _node_num;
@@ -237,24 +244,13 @@ namespace DOT {
 
 		void addNode(int i, Value b) { _supply[i] = b; }
 
-		//void addArc(int a, int b, Cost c) {
-		//	_source.emplace_back(a);
-		//	_target.emplace_back(b);
-		//	_cost.emplace_back(c);
+		void addArc(int a, int b, Cost c) {
+			_source.emplace_back(a);
+			_target.emplace_back(b);
+			_cost.emplace_back(c);
 
-		//	_flow.emplace_back(0);
-		//	_state.emplace_back(STATE_LOWER);
-
-		//	_arc_num++;
-		//}
-
-		void setArc(int idx, int a, int b, Cost c) {
-			_source[_dummy_arc + idx] = a;
-			_target[_dummy_arc + idx] = b;
-			_cost[_dummy_arc + idx] = c;
-
-			_flow[_dummy_arc + idx] = 0;
-			_state[_dummy_arc + idx] = STATE_LOWER;
+			_flow.emplace_back(0);
+			_state.emplace_back(STATE_LOWER);
 
 			_arc_num++;
 		}
@@ -268,7 +264,17 @@ namespace DOT {
 					tot_flow += _flow[e];
 				}
 
-			return c / tot_flow;
+			return c;
+		}
+
+		Cost totalFlow() const {
+			Cost tot_flow = 0;
+			for (int e = _dummy_arc; e < _arc_num; ++e)
+				if (_source[e] != _root && _target[e] != _root) {
+					tot_flow += _flow[e];
+				}
+
+			return tot_flow;
 		}
 
 		Cost potential(int n) const { return _pi[n]; }
@@ -277,7 +283,7 @@ namespace DOT {
 		ProblemType checkFeasibility() {
 			for (int e = 0; e != _dummy_arc; ++e)
 				if (_flow[e] != 0) {
-					fprintf(stdout, "ERROR: flow on dummy arcs\n");
+					fprintf(stdout, "ERROR: flow on dummy arcs: %f\n", _flow[e]);
 					return INFEASIBLE;
 				}
 			return OPTIMAL;
@@ -316,7 +322,10 @@ namespace DOT {
 				_sum_supply += _supply[i];
 			}
 
-			//assert(fabs(_sum_supply) <= 1e-16);
+			if (fabs(_sum_supply) > 1e-7) {
+				fprintf(stdout, "Total mass: %f\n", _sum_supply);
+				exit(0);
+			}
 
 			// Initialize artifical cost
 			Cost ART_COST;
@@ -623,6 +632,7 @@ namespace DOT {
 		ProblemType start() {
 			PivotRuleImpl pivot(*this);
 
+			fprintf(stdout, "%d %d %d\n", _node_num, _arc_num, (int)_source.size());
 			// Execute the Network Simplex algorithm
 			int it = 0;
 			while (pivot.findEnteringArc()) {
@@ -644,7 +654,8 @@ namespace DOT {
 					fprintf(stdout, "Iter %d: Cost=%f\n", it, totalCost());
 				it++;
 			}
-			fprintf(stdout, "Iter %d: Cost=%f\n", it, totalCost());
+			fprintf(stdout, "Iter %d: Cost=%f, Flow=%f, isFeasible: %d\n",
+				it, totalCost(), totalFlow(), checkFeasibility());
 
 			return OPTIMAL;
 		}

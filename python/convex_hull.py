@@ -138,20 +138,26 @@ def ConvexHull(Ps):
             min_idx = i
             
     anchor = Cs[min_idx]
+    print("anchor: ", anchor)
     Ss = PolarQuickSort(Cs)
+    print("Polar sort:",Ss)
     del Ss[Ss.index(anchor)]
+    print("Polar sort:",Ss)
     
     Hull = [anchor, Ss[0]]
     for s in Ss[1:]:
+        print("Hull: ", Hull)
+        print(Det(Hull[-2], Hull[-1], s))
         while Det(Hull[-2], Hull[-1], s) <= 0:
             del Hull[-1]
+            print("remove hull:", Hull)
             if len(Hull) < 2: break
         Hull.append(s)
         
     return Hull
 
 def WalkGrid(p0, p1):
-    """ https://www.redblobgames.com/grids/line-drawing.html """
+    """ https://www.    redblobgames.com/grids/line-drawing.html """
     print(p0, p1)
     dx = p1[0] - p0[0]
     dy = p1[1] - p0[1]
@@ -220,7 +226,7 @@ if __name__ == "__main__":
     np.random.seed(13)
     #Ps = [(int(x), int(y)) for x,y in np.random.multivariate_normal([20,20], [[10,5],[5,10]], 2000)]
     #RandomGridPoint(20, 20, 100)
-    Ps = [(2,3), (3,9), (1,6), (1,4), (2,4), (3,4),(3,5),(3,6)]
+    Ps = [(0,0), (4,2), (2,4)]
     Hull = ConvexHull(Ps)
     
     PlotPoints(Ps, Hull)
