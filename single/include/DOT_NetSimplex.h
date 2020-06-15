@@ -142,8 +142,8 @@ namespace DOT {
 
 			// Find next entering arc
 			bool findEnteringArc() {
-				//constexpr double negeps = 2 ^ (-32);
-				Cost min = -0;
+				const double negeps = std::nextafter(-1e-10, -0.0);
+				Cost min = negeps;
 				int cnt = _block_size;
 
 				for (int e = _next_arc; e < _arc_num; ++e) {
@@ -153,7 +153,7 @@ namespace DOT {
 						_in_arc = e;
 					}
 					if (--cnt == 0) {
-						if (min < -0) goto search_end;
+						if (min < negeps) goto search_end;
 						cnt = _block_size;
 					}
 				}
@@ -165,15 +165,14 @@ namespace DOT {
 						_in_arc = e;
 					}
 					if (--cnt == 0) {
-						if (min < -0) goto search_end;
+						if (min < negeps) goto search_end;
 						cnt = _block_size;
 					}
 				}
 
-				if (min >= -0) return false;
+				if (min >= negeps) return false;
 
 			search_end:
-				//fprintf(stdout, "%f %d\n", min, _next_arc);
 				_next_arc = _in_arc;
 				return true;
 			}

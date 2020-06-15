@@ -21,3 +21,21 @@ Functional perspective:
 6. distance, plan <- solve_min_cost_flow(flow graph)
 
 
+7. Rispondere a questa domanda: https://stats.stackexchange.com/questions/404775/calculate-earth-movers-distance-for-two-grayscale-images
+
+8. Check the input size: read by line, or all file at once
+
+9. Compute Malhabois and Pearson distances to be used as ground distances in OT
+cross	 check:
+https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.mahalanobis.html
+
+efficient implementation using cholesky:
+https://stats.stackexchange.com/questions/65705/pairwise-mahalanobis-distances?rq=1
+
+tutorial:
+https://www.machinelearningplus.com/statistics/mahalanobis-distance/
+
+linear equations:
+https://software.intel.com/content/www/us/en/develop/documentation/mkl-developer-reference-c/top/appendix-a-linear-solvers-basics/sparse-linear-systems/direct-method.html
+
+
