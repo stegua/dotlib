@@ -2,10 +2,17 @@
 
 [![Build Status](https://travis-ci.org/stegua/dotlib.svg?branch=master)](https://travis-ci.org/stegua/dotlib)
 
-This repository contains basic scripts for computing Wasserstein distances.
-The long term objective is to develop Distributed Optimal Transport Algorithms.
+This repository contains basic scripts for computing Kantorovich.Wasserstein distances.
+The long term objective is to develop Discrete Optimal Transport Algorithms.
 
-The project is just started and at the moment containes only python scripts to test the distances 
+# Notebooks
+
+| Data | Notebook | Link |
+|:-|:-|:-|
+|**[2020/10/23]**|*Two LP models for computing KW-distances*|[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/dotlib/.ipynb)|
+
+### Early stage of the project
+The project started in 2016 and it containes old python scripts to compute the distances 
 between pair of images of the [DOTMark benchmarks](http://www.stochastik.math.uni-goettingen.de/index.php?id=215/).
 
 To run the Python scripts you need the following libraries:
@@ -23,7 +30,7 @@ To build the library from C++ source, you need the following external libraries:
 
 
 ### MIT License
-Copyright (c) 2017, 2018 Stefano Gualandi
+Copyright (c) 2017-2020, by Stefano Gualandi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
