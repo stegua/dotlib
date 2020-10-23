@@ -9,7 +9,7 @@ The long term objective is to develop Discrete Optimal Transport Algorithms.
 
 | Data | Notebook | Link |
 |:-|:-|:-|
-|**[2020/10/23]**|*Two LP models for computing KW-distances*|[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/dotlib/.ipynb)|
+|**[2020/10/23]**|*Two LP models for computing KW-distances*|[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/stegua/dotlib/blob/master/notebook/KW-Distance_LP_models.ipynb)|
 
 ### Early stage of the project
 The project started in 2016 and it containes old python scripts to compute the distances 
