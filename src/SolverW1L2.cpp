@@ -137,7 +137,7 @@ private:
 };
 
 
-// In standarc C++17 it is better to use function std::gcd
+// In standar C++17 it is better to use function std::gcd
 int gcd(int _a, int _b) {
 	int a = (_a >= 0 ? _a : -_a);
 	int b = (_b >= 0 ? _b : -_b);
@@ -153,7 +153,7 @@ int gcd(int _a, int _b) {
 const auto& GCD = static_cast<int(*)(int, int)>(std::gcd);
 #else
 #include <algorithm>
-const auto& GCD = gcd;/// static_cast<int(*)(int, int)>(std::__gcd);
+const auto& GCD = gcd;
 #endif
 
 
