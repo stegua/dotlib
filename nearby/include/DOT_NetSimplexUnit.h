@@ -1,5 +1,5 @@
 /**
- * @fileoverview Copyright (c) 2019-2020, Stefano Gualandi,
+ * @fileoverview Copyright (c) 2019-2021, Stefano Gualandi,
  *               via Ferrata, 1, I-27100, Pavia, Italy
  *
  * @author stefano.gualandi@gmail.com (Stefano Gualandi)
@@ -29,22 +29,14 @@
 #pragma once
 
 #include "DOT_Commons.h"
-#include "DOT_NetSimplexUnit.h"
 
 
 namespace DOT {
-
-	template <typename V = int, typename C = V> class NetSimplex {
+	class NetSimplexUnit {
 	public:
-		// The type of the flow amounts and supply values
-		typedef V Value;
-		// The type of the arc costs
-		typedef C Cost;
-
-	private:
 		typedef std::vector<int> IntVector;
-		typedef std::vector<Value> ValueVector;
-		typedef std::vector<Cost> CostVector;
+		typedef std::vector<int> ValueVector;
+		typedef std::vector<int> CostVector;
 		typedef std::vector<signed char> CharVector;
 
 		typedef std::vector<bool> BoolVector;
@@ -65,7 +57,7 @@ namespace DOT {
 		int _next_arc;
 
 		// Parameters of the problem
-		Value _sum_supply;
+		int64_t _sum_supply;
 
 		// Data structures for storing the digraph
 		IntVector _source;
@@ -92,10 +84,10 @@ namespace DOT {
 
 		// Temporary data used in the current pivot iteration
 		int in_arc, join, u_in, v_in, u_out, v_out;
-		Value delta;
+		int delta;
 
-		const Value MAX;
-		const Value INF;
+		const int MAX;
+		const int INF;
 
 		double _runtime;
 
@@ -116,7 +108,6 @@ namespace DOT {
 			// References to the NetworkSimplex class
 			const IntVector& _source;
 			const IntVector& _target;
-			const CostVector& _cost;
 			const BoolVector& _state;
 			const CostVector& _pi;
 			int& _in_arc;
@@ -127,17 +118,13 @@ namespace DOT {
 			int _block_size;
 			int _next_arc;
 
-			// Negative eps
-			const double negeps;
-
 		public:
 			// Constructor
-			BlockSearchPivotRule(NetSimplex& ns)
-				: _source(ns._source), _target(ns._target), _cost(ns._cost),
+			BlockSearchPivotRule(NetSimplexUnit& ns)
+				: _source(ns._source), _target(ns._target),
 				_state(ns._state), _pi(ns._pi), _in_arc(ns.in_arc),
 				_arc_num(ns._arc_num), _dummy_arc(ns._dummy_arc),
-				_next_arc(ns._next_arc),
-				negeps(std::nextafter(-ns._opt_tolerance, -0.0)) {
+				_next_arc(ns._next_arc) {
 				// The main parameters of the pivot rule
 				const double BLOCK_SIZE_FACTOR = 1;
 				const int MIN_BLOCK_SIZE = 20;
@@ -150,37 +137,36 @@ namespace DOT {
 
 			// Find next entering arc
 			bool findEnteringArc() {
-				Cost min = negeps;
-
+				int min = 0;
 				int cnt = _block_size;
 
 				for (int e = _next_arc; e < _arc_num; ++e) {
-					Cost c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+					int c = _state[e] * (1 + _pi[_source[e]] - _pi[_target[e]]);
 					if (c < min) {
 						min = c;
 						_in_arc = e;
 					}
 					if (--cnt == 0) {
-						if (min < negeps)
+						if (min < 0)
 							goto search_end;
 						cnt = _block_size;
 					}
 				}
 
 				for (int e = _dummy_arc; e < _next_arc; ++e) {
-					Cost c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+					int c = _state[e] * (1 + _pi[_source[e]] - _pi[_target[e]]);
 					if (c < min) {
 						min = c;
 						_in_arc = e;
 					}
 					if (--cnt == 0) {
-						if (min < negeps)
+						if (min < 0)
 							goto search_end;
 						cnt = _block_size;
 					}
 				}
 
-				if (min >= negeps)
+				if (min >= 0)
 					return false;
 
 			search_end:
@@ -191,19 +177,19 @@ namespace DOT {
 		}; // class BlockSearchPivotRule
 
 	public:
-		NetSimplex(const char INIT, int node_num, int arc_num)
+		NetSimplexUnit(const char INIT, int node_num, int arc_num)
 			: _node_num(node_num), _arc_num(0), _root(-1), in_arc(-1), join(-1),
 			u_in(-1), v_in(-1), u_out(-1), v_out(-1),
-			MAX((std::numeric_limits<Value>::max)()),
-			INF(std::numeric_limits<Value>::has_infinity
-				? std::numeric_limits<Value>::infinity()
+			MAX((std::numeric_limits<int>::max)()),
+			INF(std::numeric_limits<int>::has_infinity
+				? std::numeric_limits<int>::infinity()
 				: MAX),
 			_runtime(0.0) {
 			// Check the number types
-			if (!std::numeric_limits<Value>::is_signed)
+			if (!std::numeric_limits<int>::is_signed)
 				throw std::runtime_error(
 					"The flow type of NetworkSimplex must be signed");
-			if (!std::numeric_limits<Cost>::is_signed)
+			if (!std::numeric_limits<int>::is_signed)
 				throw std::runtime_error(
 					"The cost type of NetworkSimplex must be signed");
 
@@ -227,19 +213,19 @@ namespace DOT {
 				max_arc_num = 2 * _node_num + arc_num + 1;
 
 			if (INIT == 'E') // Empty, for Column Generation
-				max_arc_num = 4 * _node_num + 1;
+				max_arc_num = 8 * _node_num + 1;
 
 			_source.reserve(max_arc_num);
 			_target.reserve(max_arc_num);
-
 			_cost.reserve(max_arc_num);
+
 			_flow.reserve(max_arc_num);
 			_state.reserve(max_arc_num);
 
 			_source.resize(_node_num);
 			_target.resize(_node_num);
-
 			_cost.resize(_node_num, 0);
+
 			_flow.resize(_node_num, 0);
 			_state.resize(_node_num, STATE_LOWER);
 
@@ -256,31 +242,6 @@ namespace DOT {
 			_iterations = 0;
 			// Benchmarking
 			t1 = 0.0, t2 = 0.0, t3 = 0.0, t4 = 0.0, t5 = 0.0, t6 = 0.0;
-		}
-
-
-		NetSimplex(const NetSimplexUnit& o)
-			: _source(o._source),
-			_target(o._target),
-			_supply(o._supply.begin(), o._supply.end()),
-			_flow(o._flow.begin(), o._flow.end()),
-			_cost(o._cost.begin(), o._cost.end()),
-			_pi(o._pi.begin(), o._pi.end()),
-			_parent(o._parent),
-			_pred(o._pred),
-			_thread(o._thread),
-			_rev_thread(o._rev_thread),
-			_succ_num(o._succ_num),
-			_last_succ(o._last_succ),
-			_pred_dir(o._pred_dir),
-			_state(o._state),
-			_dirty_revs(o._dirty_revs),
-			_dummy_arc(o._dummy_arc), _next_arc(o._dummy_arc),
-			_node_num(o._node_num), _arc_num(o._arc_num), _root(o._root), in_arc(o.in_arc), join(o.join),
-			u_in(o.u_in), v_in(o.v_in), u_out(o.u_out), v_out(o.v_out),
-			MAX(o.MAX), INF(o.INF), _runtime(o._runtime)
-		{
-
 		}
 
 		ProblemType run(PivotRule pivot_rule = PivotRule::BLOCK_SEARCH) {
@@ -303,13 +264,19 @@ namespace DOT {
 			return start(pivot_rule);
 		}
 
-		uint64_t num_arcs() const { return uint64_t(_source.size()) - _dummy_arc; }
+		uint64_t num_arcs() const {
+			return uint64_t(_source.size()) - _dummy_arc;
+		}
 
-		uint64_t num_nodes() const { return _node_num; }
+		uint64_t num_nodes() const {
+			return _node_num;
+		}
 
-		void addNode(int i, Value b) { _supply[i] = b; }
+		void addNode(int i, int b) {
+			_supply[i] = b;
+		}
 
-		void addArc(int a, int b, Cost c) {
+		void addArc(int a, int b, int c) {
 			_source.emplace_back(a);
 			_target.emplace_back(b);
 			_cost.emplace_back(c);
@@ -320,7 +287,7 @@ namespace DOT {
 			_arc_num++;
 		}
 
-		void setArc(size_t idx, int a, int b, Cost c) {
+		void setArc(size_t idx, int a, int b, int c) {
 			_source[_dummy_arc + idx] = a;
 			_target[_dummy_arc + idx] = b;
 			_cost[_dummy_arc + idx] = c;
@@ -345,7 +312,7 @@ namespace DOT {
 				while (e < e_max) {
 					// Replace useless variables with new variables
 					if (_state[e] == STATE_LOWER &&
-						(_cost[e] + _pi[_source[e]] - _pi[_target[e]] > 1e-09))
+						(1 + _pi[_source[e]] - _pi[_target[e]] > 0))
 						break;
 					++e;
 				}
@@ -353,7 +320,6 @@ namespace DOT {
 					break;
 				_source[e] = as[idx].a;
 				_target[e] = as[idx].b;
-				_cost[e] = as[idx].c;
 				if (new_arc == 0)
 					_next_arc = e;
 				new_arc++;
@@ -369,17 +335,17 @@ namespace DOT {
 			return new_arc;
 		}
 
-		double totalCost() const {
-			double c = 0;
+		int64_t totalCost() const {
+			int64_t c = 0;
 			for (int e = _dummy_arc; e < _arc_num; ++e)
 				if (_source[e] != _root && _target[e] != _root)
-					c += _flow[e] * _cost[e];
+					c += _cost[e] * _flow[e];
 
 			return c;
 		}
 
-		Cost totalFlow() const {
-			Cost tot_flow = 0;
+		int64_t totalFlow() const {
+			int64_t tot_flow = 0;
 			for (int e = _dummy_arc; e < _arc_num; ++e)
 				if (_source[e] != _root && _target[e] != _root)
 					tot_flow += _flow[e];
@@ -387,46 +353,28 @@ namespace DOT {
 			return tot_flow;
 		}
 
-		Cost dummyFlow() const {
-			Cost tot_flow = 0;
+		int64_t dummyFlow() const {
+			int64_t tot_flow = 0;
 			for (int e = 0; e < _dummy_arc; ++e)
 				tot_flow += _flow[e];
 
 			return tot_flow;
 		}
 
-		void updateDummyCost(Cost value) {
-			Cost tot_flow = 0;
-			for (int e = 0; e < _dummy_arc; ++e)
-				_cost[e] = value;
-
-			return tot_flow;
-		}
-
-		// Recompute potentials
-		void recomputePotential() {
-			int j = _thread[u_in];
-			_pi[u_in] = 0;
-
-			while (j != u_in) {
-				int e = _pred[j];
-				if (j == _target[e])
-					_pi[_target[e]] = _pi[_source[e]] + _cost[e];
-				else
-					_pi[_source[e]] = _pi[_target[e]] - _cost[e];
-
-				j = _thread[j];
-			}
-		}
-
 		// Potential of node n
-		Cost potential(int n) const { return _pi[n]; }
+		int potential(int n) const {
+			return _pi[n];
+		}
 
 		// Runtime in milliseconds
-		double runtime() const { return _runtime; }
+		double runtime() const {
+			return _runtime;
+		}
 
 		// Number of iterations of simplex algorithms
-		uint64_t iterations() const { return _iterations; }
+		uint64_t iterations() const {
+			return _iterations;
+		}
 
 		// Set basic parameters
 		void setTimelimit(double t) {
@@ -451,7 +399,7 @@ namespace DOT {
 		// Check feasibility
 		ProblemType checkFeasibility() {
 			for (int e = 0; e != _dummy_arc; ++e)
-				if (fabs(_flow[e]) > 1e-09)
+				if (fabs(_flow[e]) > 0)
 					throw std::runtime_error(
 						"ERROR 3: flow on dummy arcs: " + std::to_string(_flow[e]) + "\n");
 
@@ -463,7 +411,6 @@ namespace DOT {
 			auto o = _source.size();
 			_source.reserve(o + s);
 			_target.reserve(o + s);
-			_cost.reserve(o + s);
 
 			_flow.reserve(o + s);
 			_state.reserve(o + s);
@@ -474,7 +421,6 @@ namespace DOT {
 			int o = static_cast<int>(_source.size());
 			_source.resize(o + s, -1);
 			_target.resize(o + s, -1);
-			_cost.resize(o + s, -1);
 
 			_flow.resize(o + s, 0);
 			_state.resize(o + s, STATE_LOWER);
@@ -492,24 +438,13 @@ namespace DOT {
 				_sum_supply += _supply[i];
 			}
 
-			if (fabs(_sum_supply) > 0.00001) {
-				// TODO: deal with this case
-				// fprintf(stdout, "Error Code 13: %f\n", _sum_supply);
-				// throw std::runtime_error("Error Code 13");
-			}
-
 			// Initialize artifical cost
-			Cost ART_COST;
-			if (std::numeric_limits<Cost>::is_exact) {
-				ART_COST = (std::numeric_limits<Cost>::max)() / 2 + 1;
+			int ART_COST;
+			if (std::numeric_limits<int>::is_exact) {
+				ART_COST = (std::numeric_limits<int>::max)() / 2 + 1;
 			}
 			else {
-				ART_COST = 0;
-				for (int i = _dummy_arc; i != _arc_num; ++i) {
-					if (_cost[i] > ART_COST)
-						ART_COST = _cost[i];
-				}
-				ART_COST = (ART_COST + 1) * _node_num;
+				ART_COST = 2 * _node_num;
 			}
 
 			// Set data for the artificial root node
@@ -524,9 +459,6 @@ namespace DOT {
 			_supply[_root] = -_sum_supply;
 			_pi[_root] = 0;
 
-			// Add artificial arcs and initialize the spanning tree data structure
-
-			// EQ supply constraints
 			for (int u = 0, e = 0; u != _node_num; ++u, ++e) {
 				_parent[u] = _root;
 				_pred[u] = e;
@@ -582,7 +514,7 @@ namespace DOT {
 
 			delta = MAX;
 			int result = 0;
-			Value d;
+			int d;
 			int e;
 
 			// Search the cycle form the first node to the join node
@@ -782,7 +714,7 @@ namespace DOT {
 
 		// Update potentials in the subtree that has been moved
 		void updatePotential() {
-			Cost sigma = _pi[v_in] - _pi[u_in] - _pred_dir[u_in] * _cost[in_arc];
+			int sigma = _pi[v_in] - _pi[u_in] - _pred_dir[u_in];
 			int end = _thread[_last_succ[u_in]];
 
 			for (int u = u_in; u != end; u = _thread[u]) {

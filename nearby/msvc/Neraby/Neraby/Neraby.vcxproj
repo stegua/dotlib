@@ -145,8 +145,10 @@
     <ClCompile Include="..\..\..\src\SolverCLI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\include\DOT_Commons.h" />
     <ClInclude Include="..\..\..\include\DOT_Histogram2D.h" />
     <ClInclude Include="..\..\..\include\DOT_NetSimplex.h" />
+    <ClInclude Include="..\..\..\include\DOT_NetSimplexUnit.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

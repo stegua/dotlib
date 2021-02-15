@@ -22,5 +22,11 @@
     <ClInclude Include="..\..\..\include\DOT_NetSimplex.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_NetSimplexUnit.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_Commons.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
