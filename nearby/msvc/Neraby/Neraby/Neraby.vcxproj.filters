@@ -28,5 +28,8 @@
     <ClInclude Include="..\..\..\include\DOT_Commons.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\network_simplex.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

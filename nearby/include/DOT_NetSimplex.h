@@ -396,11 +396,11 @@ namespace DOT {
 		}
 
 		void updateDummyCost(Cost value) {
-			Cost tot_flow = 0;
 			for (int e = 0; e < _dummy_arc; ++e)
-				_cost[e] = value;
-
-			return tot_flow;
+				if (_supply[e] >= 0)
+					_cost[e] = 0;
+				else
+					_cost[e] = value;
 		}
 
 		// Recompute potentials
@@ -867,7 +867,8 @@ namespace DOT {
 
 				// Add as log file
 				_iterations++;
-				if (N_IT_LOG > 0) {
+				if (N_IT_LOG > 0)
+				{
 					if (_iterations % N_IT_LOG == 0) {
 						auto end_t = std::chrono::steady_clock::now();
 						double tot =
