@@ -28,25 +28,30 @@ int main(int argc, char* argv[]) {
 		DOT::Histogram2D a;
 		DOT::Histogram2D b;
 
-		//a.parse("C:\\Users\\Gualandi\\Google "
-		//	"Drive\\Ricerca\\DOTA\\data\\DOTmark_1."
-		//	"0\\Data\\ClassicImages\\data32_1001.csv");
-		//b.parse("C:\\Users\\Gualandi\\Google "
-		//	"Drive\\Ricerca\\DOTA\\data\\DOTmark_1."
-		//	"0\\Data\\ClassicImages\\data32_1005.csv");
+		a.parse("C:\\Users\\Gualandi\\Google "
+			"Drive\\Ricerca\\DOTA\\data\\DOTmark_1."
+			"0\\Data\\ClassicImages\\data128_1001.csv");
+		b.parse("C:\\Users\\Gualandi\\Google "
+			"Drive\\Ricerca\\DOTA\\data\\DOTmark_1."
+			"0\\Data\\ClassicImages\\data128_1002.csv");
 
-		a.parse("test1.csv");
-		b.parse("test2.csv");
+		//std::string pp = "C:\\Users\\Gualandi\\Documents\\GitHub\\dotlib\\nearby\\msvc\\Neraby\\x64\\Debug\\";
+		//a.parse(pp + "test1.csv");
+		//b.parse(pp + "test2.csv");
 
 
 		PRINT("start solver %ld %ld\n", a.balance(), b.balance());
 		DOT::Solver solver;
 
-		double dist0 = solver.bipartite(a, b);
+		//double dist0 = solver.bipartite(a, b);
 
 		// TODO: FIX double dist1 = solver.tripartite(a, b);
 
-		double dist2 = solver.phaseOne(a, b);
+		//solver.phaseOne(a, b);
+
+		//solver.phaseTwo(a, b);
+
+		solver.colgen(a, b);
 	}
 
 	if (false) {

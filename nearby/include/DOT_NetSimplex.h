@@ -1,5 +1,5 @@
 /**
- * @fileoverview Copyright (c) 2019-2020, Stefano Gualandi,
+ * @fileoverview Copyright (c) 2019-2021, Stefano Gualandi,
  *               via Ferrata, 1, I-27100, Pavia, Italy
  *
  * @author stefano.gualandi@gmail.com (Stefano Gualandi)
@@ -34,17 +34,11 @@
 
 namespace DOT {
 
-	template <typename V = int, typename C = V> class NetSimplex {
+	class NetSimplex {
 	public:
-		// The type of the flow amounts and supply values
-		typedef V Value;
-		// The type of the arc costs
-		typedef C Cost;
-
-	private:
 		typedef std::vector<int> IntVector;
-		typedef std::vector<Value> ValueVector;
-		typedef std::vector<Cost> CostVector;
+		typedef std::vector<int> ValueVector;
+		typedef std::vector<int> CostVector;
 		typedef std::vector<signed char> CharVector;
 
 		typedef std::vector<bool> BoolVector;
@@ -65,7 +59,7 @@ namespace DOT {
 		int _next_arc;
 
 		// Parameters of the problem
-		Value _sum_supply;
+		int64_t _sum_supply;
 
 		// Data structures for storing the digraph
 		IntVector _source;
@@ -92,10 +86,10 @@ namespace DOT {
 
 		// Temporary data used in the current pivot iteration
 		int in_arc, join, u_in, v_in, u_out, v_out;
-		Value delta;
+		int delta;
 
-		const Value MAX;
-		const Value INF;
+		const int MAX;
+		const int INF;
 
 		double _runtime;
 
@@ -150,12 +144,12 @@ namespace DOT {
 
 			// Find next entering arc
 			bool findEnteringArc() {
-				Cost min = negeps;
+				int min = 0;
 
 				int cnt = _block_size;
 
 				for (int e = _next_arc; e < _arc_num; ++e) {
-					Cost c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+					int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
 					if (c < min) {
 						min = c;
 						_in_arc = e;
@@ -168,7 +162,7 @@ namespace DOT {
 				}
 
 				for (int e = _dummy_arc; e < _next_arc; ++e) {
-					Cost c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+					int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
 					if (c < min) {
 						min = c;
 						_in_arc = e;
@@ -194,16 +188,16 @@ namespace DOT {
 		NetSimplex(const char INIT, int node_num, int arc_num)
 			: _node_num(node_num), _arc_num(0), _root(-1), in_arc(-1), join(-1),
 			u_in(-1), v_in(-1), u_out(-1), v_out(-1),
-			MAX((std::numeric_limits<Value>::max)()),
-			INF(std::numeric_limits<Value>::has_infinity
-				? std::numeric_limits<Value>::infinity()
+			MAX((std::numeric_limits<int>::max)()),
+			INF(std::numeric_limits<int>::has_infinity
+				? std::numeric_limits<int>::infinity()
 				: MAX),
 			_runtime(0.0) {
 			// Check the number types
-			if (!std::numeric_limits<Value>::is_signed)
+			if (!std::numeric_limits<int>::is_signed)
 				throw std::runtime_error(
 					"The flow type of NetworkSimplex must be signed");
-			if (!std::numeric_limits<Cost>::is_signed)
+			if (!std::numeric_limits<int>::is_signed)
 				throw std::runtime_error(
 					"The cost type of NetworkSimplex must be signed");
 
@@ -280,7 +274,6 @@ namespace DOT {
 			u_in(o.u_in), v_in(o.v_in), u_out(o.u_out), v_out(o.v_out),
 			MAX(o.MAX), INF(o.INF), _runtime(o._runtime)
 		{
-
 		}
 
 		ProblemType run(PivotRule pivot_rule = PivotRule::BLOCK_SEARCH) {
@@ -307,9 +300,10 @@ namespace DOT {
 
 		uint64_t num_nodes() const { return _node_num; }
 
-		void addNode(int i, Value b) { _supply[i] = b; }
+		void addNode(int i, int b) { _supply[i] = b; }
 
-		void addArc(int a, int b, Cost c) {
+		size_t addArc(int a, int b, int c) {
+			size_t idx = _source.size();
 			_source.emplace_back(a);
 			_target.emplace_back(b);
 			_cost.emplace_back(c);
@@ -318,9 +312,10 @@ namespace DOT {
 			_state.emplace_back(STATE_LOWER);
 
 			_arc_num++;
+			return idx;
 		}
 
-		void setArc(size_t idx, int a, int b, Cost c) {
+		void setArc(size_t idx, int a, int b, int c) {
 			_source[_dummy_arc + idx] = a;
 			_target[_dummy_arc + idx] = b;
 			_cost[_dummy_arc + idx] = c;
@@ -331,6 +326,20 @@ namespace DOT {
 			_arc_num++;
 		}
 
+		// Manage dummy flow
+		void updateArcs(const vector<size_t>& as, int value) {
+			for (const auto e : as)
+				_cost[e] = value;
+		}
+
+		int64_t computeDummyFlow(const vector<size_t>& as) const {
+			int64_t tot_flow = 0;
+			for (const auto e : as)
+				tot_flow += _flow[e];
+			return tot_flow;
+		}
+
+		// Column Generation
 		int updateArcs(const Vars& as) {
 			int new_arc = 0;
 			size_t idx = 0;
@@ -345,7 +354,7 @@ namespace DOT {
 				while (e < e_max) {
 					// Replace useless variables with new variables
 					if (_state[e] == STATE_LOWER &&
-						(_cost[e] + _pi[_source[e]] - _pi[_target[e]] > 1e-09))
+						(_cost[e] + _pi[_source[e]] - _pi[_target[e]] > 1))
 						break;
 					++e;
 				}
@@ -378,8 +387,8 @@ namespace DOT {
 			return c;
 		}
 
-		Cost totalFlow() const {
-			Cost tot_flow = 0;
+		int64_t totalFlow() const {
+			int64_t tot_flow = 0;
 			for (int e = _dummy_arc; e < _arc_num; ++e)
 				if (_source[e] != _root && _target[e] != _root)
 					tot_flow += _flow[e];
@@ -387,15 +396,15 @@ namespace DOT {
 			return tot_flow;
 		}
 
-		Cost dummyFlow() const {
-			Cost tot_flow = 0;
+		int64_t dummyFlow() const {
+			int64_t tot_flow = 0;
 			for (int e = 0; e < _dummy_arc; ++e)
 				tot_flow += _flow[e];
 
 			return tot_flow;
 		}
 
-		void updateDummyCost(Cost value) {
+		void updateDummyCost(int value) {
 			for (int e = 0; e < _dummy_arc; ++e)
 				if (_supply[e] >= 0)
 					_cost[e] = 0;
@@ -405,10 +414,10 @@ namespace DOT {
 
 		// Recompute potentials
 		void recomputePotential() {
-			int j = _thread[u_in];
-			_pi[u_in] = 0;
+			int j = _thread[_root];
+			_pi[_root] = 0;
 
-			while (j != u_in) {
+			while (j != _root) {
 				int e = _pred[j];
 				if (j == _target[e])
 					_pi[_target[e]] = _pi[_source[e]] + _cost[e];
@@ -420,7 +429,7 @@ namespace DOT {
 		}
 
 		// Potential of node n
-		Cost potential(int n) const { return _pi[n]; }
+		int potential(int n) const { return _pi[n]; }
 
 		// Runtime in milliseconds
 		double runtime() const { return _runtime; }
@@ -488,20 +497,13 @@ namespace DOT {
 
 			// Check the sum of supply values
 			_sum_supply = 0;
-			for (int i = 0; i != _node_num; ++i) {
+			for (int i = 0; i != _node_num; ++i)
 				_sum_supply += _supply[i];
-			}
-
-			if (fabs(_sum_supply) > 0.00001) {
-				// TODO: deal with this case
-				// fprintf(stdout, "Error Code 13: %f\n", _sum_supply);
-				// throw std::runtime_error("Error Code 13");
-			}
 
 			// Initialize artifical cost
-			Cost ART_COST;
-			if (std::numeric_limits<Cost>::is_exact) {
-				ART_COST = (std::numeric_limits<Cost>::max)() / 2 + 1;
+			int ART_COST;
+			if (std::numeric_limits<int>::is_exact) {
+				ART_COST = (std::numeric_limits<int>::max)() / 2 + 1;
 			}
 			else {
 				ART_COST = 0;
@@ -513,7 +515,6 @@ namespace DOT {
 			}
 
 			// Set data for the artificial root node
-			// TODO: POSSO USARLI PER LA MASSA SBILANCIATA!
 			_root = _node_num;
 			_parent[_root] = -1;
 			_pred[_root] = -1;
@@ -524,9 +525,6 @@ namespace DOT {
 			_supply[_root] = -_sum_supply;
 			_pi[_root] = 0;
 
-			// Add artificial arcs and initialize the spanning tree data structure
-
-			// EQ supply constraints
 			for (int u = 0, e = 0; u != _node_num; ++u, ++e) {
 				_parent[u] = _root;
 				_pred[u] = e;
@@ -582,7 +580,7 @@ namespace DOT {
 
 			delta = MAX;
 			int result = 0;
-			Value d;
+			int d;
 			int e;
 
 			// Search the cycle form the first node to the join node
@@ -782,7 +780,7 @@ namespace DOT {
 
 		// Update potentials in the subtree that has been moved
 		void updatePotential() {
-			Cost sigma = _pi[v_in] - _pi[u_in] - _pred_dir[u_in] * _cost[in_arc];
+			int sigma = _pi[v_in] - _pi[u_in] - _pred_dir[u_in] * _cost[in_arc];
 			int end = _thread[_last_succ[u_in]];
 
 			for (int u = u_in; u != end; u = _thread[u]) {
@@ -808,14 +806,14 @@ namespace DOT {
 
 			// Execute the Network Simplex algorithm
 			while (true) {
-				// auto start_t = std::chrono::steady_clock::now();
+				auto start_t = std::chrono::steady_clock::now();
 				bool stop = pivot.findEnteringArc();
-				// auto end_t = std::chrono::steady_clock::now();
-				// t1 += double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t
-				// -
-				//                                                                  start_t)
-				//                 .count()) /
-				//      1000000000;
+				auto end_t = std::chrono::steady_clock::now();
+				t1 += double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t
+					-
+					start_t)
+					.count()) /
+					1000000000;
 
 				if (!stop)
 					break;
@@ -856,14 +854,14 @@ namespace DOT {
 				//                 .count()) /
 				//      1000000000;
 
-				// start_t = std::chrono::steady_clock::now();
+				start_t = std::chrono::steady_clock::now();
 				updatePotential();
-				// end_t = std::chrono::steady_clock::now();
-				// t6 += double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t
-				// -
-				//                                                                  start_t)
-				//                 .count()) /
-				//      1000000000;
+				end_t = std::chrono::steady_clock::now();
+				t6 += double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t
+					-
+					start_t)
+					.count()) /
+					1000000000;
 
 				// Add as log file
 				_iterations++;

@@ -323,10 +323,7 @@ namespace DOT {
 			auto start_t = std::chrono::steady_clock::now();
 
 			// Build the graph for min cost flow
-			typedef int64_t FlowType;
-			typedef int64_t CostType;
-
-			NetSimplex<FlowType, CostType> simplex('F', static_cast<int>(2 * n * n), static_cast<int>(n * n) * static_cast<int>(n * n));
+			NetSimplex simplex('F', static_cast<int>(2 * n * n), static_cast<int>(n * n) * static_cast<int>(n * n));
 
 			// Set the parameters
 			simplex.setTimelimit(timelimit);
@@ -385,10 +382,7 @@ namespace DOT {
 			auto start_t = std::chrono::steady_clock::now();
 
 			// Build the graph for min cost flow
-			typedef double FlowType;
-			typedef double CostType;
-
-			NetSimplex<FlowType, CostType> simplex('E', static_cast<int>(3 * n * n), 0);
+			NetSimplex simplex('E', static_cast<int>(3 * n * n), 0);
 
 			// Set the parameters
 			simplex.setTimelimit(timelimit);
@@ -450,199 +444,186 @@ namespace DOT {
 		}
 
 		// Compute Kantorovich-Wasserstein distance between two measures
-		double phaseOne(const Histogram2D& A, const Histogram2D& B) {
+		double phaseTwo(const Histogram2D& A, const Histogram2D& B) {
 
 			size_t n = A.getN();
 
 			// Compute distances
-			std::set<int64_t> tauset;
+			std::set<int> tauset;
 			for (size_t v = 0; v < n; ++v)
 				for (size_t w = 0; w < n; ++w)
-					tauset.insert(pow(v, 2) + pow(w, 2));
+					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
 
-			vector<int64_t> tau;
+			vector<int> tau;
 			for (auto v : tauset)
 				tau.push_back(v);
+			tau.push_back(tau.back() * 2);
 
 			fprintf(stdout, "distances: %d %d\n", tau.size(), tau[0]);
 
 			size_t idxL = 0;
-			init_coprimes(tau[idxL++]);
+			init_dist_upto(tau[idxL++]);
 			// Build the graph for min cost flow
-			NetSimplexUnit simplex('E', static_cast<int>(2 * n * n), 0);
+			NetSimplexUnit simplex('E', static_cast<int>(2 * n * n) + 1, 0);
 
 			auto ID = [&n](int x, int y) { return x * n + y; };
 			auto start_t = std::chrono::steady_clock::now();
 
-			//{
-			//	// Set the parameters
-			//	simplex.setTimelimit(timelimit);
-			//	simplex.setVerbosity(verbosity);
-			//	simplex.setOptTolerance(opt_tolerance);
+			{
+				// Set the parameters
+				simplex.setTimelimit(timelimit);
+				simplex.setVerbosity(verbosity);
+				simplex.setOptTolerance(opt_tolerance);
 
-			//	// add first d source nodes
-			//	for (size_t i = 0; i < n; ++i)
-			//		for (size_t j = 0; j < n; ++j)
-			//			simplex.addNode(ID(i, j), A.get(i, j));
+				// add first d source nodes
+				for (size_t i = 0; i < n; ++i)
+					for (size_t j = 0; j < n; ++j)
+						simplex.addNode(ID(i, j), A.get(i, j));
 
-			//	for (size_t i = 0; i < n; ++i)
-			//		for (size_t j = 0; j < n; ++j)
-			//			simplex.addNode(n * n + ID(i, j), -B.get(i, j));
+				for (size_t i = 0; i < n; ++i)
+					for (size_t j = 0; j < n; ++j)
+						simplex.addNode(n * n + ID(i, j), -B.get(i, j));
 
-			//	for (size_t i = 0; i < n; ++i)
-			//		for (size_t j = 0; j < n; ++j) {
-			//			for (const auto& p : coprimes) {
-			//				int v = p.v;
-			//				int w = p.w;
-			//				if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
-			//					simplex.addArc(ID(i, j), n * n + ID(i + v, j + w), p.c_vw);
-			//				}
-			//			}
-			//		}
-
-			//	int it = 0;
-			//	int n_cuts = 0;
-			//	int64_t fobj = 0;
-
-			//	// Init the simplex
-			//	double _all_p = 0.0;
-
-			//	simplex.run();
-			//	_iterations = simplex.iterations();
-
-			//	// Start separation
-			//	while (true) {
-			//		_status = simplex.reRun();
-
-			//		if (_status == ProblemType::TIMELIMIT)
-			//			break;
-
-			//		// Check feasibility: if feasible stop
-			//		auto dummyFlow = simplex.dummyFlow();
-			//		fprintf(stdout, "Flow: %ld, idx: %d, tau: %d\n", dummyFlow, idxL,
-			//			tau[idxL]);
-
-			//		if (abs(dummyFlow) < 1e-06 || idxL >= tau.size())
-			//			break;
-
-			//		// Update cost for dummy arcs (!)
-			//		// MA SERVE? : simplex.updateDummyCost(tau[idxL+1]);
-
-			//		// Add arcs
-			//		init_coprimes(tau[idxL]);
-			//		idxL++;
-
-			//		for (size_t i = 0; i < n; ++i)
-			//			for (size_t j = 0; j < n; ++j) {
-			//				for (const auto& p : coprimes) {
-			//					int v = p.v;
-			//					int w = p.w;
-			//					if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
-			//						simplex.addArc(ID(i, j), n * n + ID(i + v, j + w), p.c_vw);
-			//					}
-			//				}
-			//			}
-
-			//		++it;
-			//	}
-
-			//	_runtime = simplex.runtime();
-			//	_iterations = simplex.iterations();
-			//	_num_arcs = simplex.num_arcs();
-			//	_num_nodes = simplex.num_nodes();
-
-			//	auto end_t = std::chrono::steady_clock::now();
-			//	auto _all =
-			//		double(std::chrono::duration_cast<std::chrono::milliseconds>(
-			//			end_t - start_t)
-			//			.count()) /
-			//		1000;
-
-			//	fobj = simplex.totalCost();
-
-			//	PRINT("it: %d, fobj: %f, all: %f, simplex: %f, num_arcs: %ld\n", it,
-			//		fobj,
-			//		_all, _runtime, _num_arcs);
-			//}
-
-			// ------------------------ PHASE TWO -----------------------------------
-			/*idxL = 3;
-			init_coprimes(tau[idxL]);
-			idxL++;*/
-
-			idxL = 3;
-			////idxL--;
-			init_dist_upto(tau[idxL]);
-			idxL++;
-
-			fprintf(stdout, "distances: %d %d\n", tau.size(), tau[idxL - 1]);
-
-			typedef int FlowType;
-			typedef int CostType;
-
-			// Build the graph for min cost flow
-			NetSimplex<FlowType, CostType> simplexTwo('E', static_cast<int>(2 * n * n + 1),
-				0);
-
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
-					simplexTwo.addNode(ID(i, j), A.get(i, j));
-
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
-					simplexTwo.addNode(n * n + ID(i, j), -B.get(i, j));
-
-			simplexTwo.addNode(2 * n * n, 0);
-
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j) {
-					for (const auto& p : coprimes) {
-						int v = p.v;
-						int w = p.w;
-						if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
-							simplexTwo.addArc(ID(i, j), n * n + ID(i + v, j + w), p.c_vw);
+				for (size_t i = 0; i < n; ++i)
+					for (size_t j = 0; j < n; ++j) {
+						for (const auto& p : coprimes) {
+							int v = p.v;
+							int w = p.w;
+							if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
+								simplex.addArc(ID(i, j), n * n + ID(i + v, j + w), p.c_vw);
+							}
 						}
 					}
+
+				int it = 0;
+				int n_cuts = 0;
+				int64_t fobj = 0;
+
+				// Init the simplex
+				double _all_p = 0.0;
+
+				simplex.run();
+				_iterations = simplex.iterations();
+
+				// Start separation
+				while (true) {
+					_status = simplex.reRun();
+
+					if (_status == ProblemType::TIMELIMIT)
+						break;
+
+					// Check feasibility: if feasible stop
+					auto dummyFlow = simplex.dummyFlow();
+					fprintf(stdout, "Flow: %ld, idx: %d, tau: %d\n", dummyFlow, idxL,
+						tau[idxL]);
+
+					if (abs(dummyFlow) < 1e-06 || idxL >= tau.size())
+						break;
+
+					// Add arcs
+					init_coprimes(tau[idxL]);
+					idxL++;
+
+					for (size_t i = 0; i < n; ++i)
+						for (size_t j = 0; j < n; ++j) {
+							for (const auto& p : coprimes) {
+								int v = p.v;
+								int w = p.w;
+								if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
+									simplex.addArc(ID(i, j), n * n + ID(i + v, j + w), p.c_vw);
+								}
+							}
+						}
+
+					++it;
 				}
 
+				_runtime = simplex.runtime();
+				_iterations = simplex.iterations();
+				_num_arcs = simplex.num_arcs();
+				_num_nodes = simplex.num_nodes();
+
+				auto end_t = std::chrono::steady_clock::now();
+				auto _all =
+					double(std::chrono::duration_cast<std::chrono::milliseconds>(
+						end_t - start_t)
+						.count()) /
+					1000;
+
+				fobj = simplex.totalCost();
+
+				PRINT("it: %d, fobj: %f, all: %f, simplex: %f, num_arcs: %ld\n", it,
+					fobj,
+					_all, _runtime, _num_arcs);
+
+				return fobj;
+			}
+
+			// ------------------------ PHASE TWO -----------------------------------
+			///*idxL = 3;
+			//init_coprimes(tau[idxL]);
+			//idxL++;*/
+
+			//idxL = 1;
+			//init_dist_upto(tau[idxL]);
+			//idxL++;
+
+			//fprintf(stdout, "distances: %d %d\n", tau.size(), tau[idxL - 1]);
+
+			//// Build the graph for min cost flow
+			//NetSimplex<int, int> simplexTwo('E', static_cast<int>(2 * n * n + 1),
+			//	0);
+
+			//for (size_t i = 0; i < n; ++i)
+			//	for (size_t j = 0; j < n; ++j)
+			//		simplexTwo.addNode(ID(i, j), A.get(i, j));
+
+			//for (size_t i = 0; i < n; ++i)
+			//	for (size_t j = 0; j < n; ++j)
+			//		simplexTwo.addNode(n * n + ID(i, j), -B.get(i, j));
+
+			//simplexTwo.addNode(2 * n * n, 0);
+
+			//for (size_t i = 0; i < n; ++i)
+			//	for (size_t j = 0; j < n; ++j) {
+			//		for (const auto& p : coprimes) {
+			//			int v = p.v;
+			//			int w = p.w;
+			//			if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
+			//				simplexTwo.addArc(ID(i, j), n * n + ID(i + v, j + w), p.c_vw);
+			//			}
+			//		}
+			//	}
+
+			NetSimplex simplexTwo(simplex);
+
+			// Arcs to be updated
+			vector<size_t> dummy_arcs;
+			dummy_arcs.reserve(n * n);
 			for (size_t i = 0; i < n; ++i)
 				for (size_t j = 0; j < n; ++j)
-					simplexTwo.addArc(ID(i, j), 2 * n * n, tau[idxL]);
+					dummy_arcs.push_back(simplexTwo.addArc(ID(i, j), 2 * n * n, tau[idxL]));
 
 			for (size_t i = 0; i < n; ++i)
 				for (size_t j = 0; j < n; ++j)
 					simplexTwo.addArc(2 * n * n, ID(i, j), 0);
 
-			//NetSimplex<FlowType, CostType> simplexTwo(simplex);			
-			//simplexTwo.updateDummyCost(-tau[idxL]);
-			//simplexTwo.recomputePotential();
+			simplexTwo.recomputePotential();
 
 			// Set the parameters
 			simplexTwo.setTimelimit(timelimit);
 			simplexTwo.setVerbosity(verbosity);
 			simplexTwo.setOptTolerance(opt_tolerance);
 
-			simplexTwo.run();
+			_status = simplexTwo.reRun();
 
-			auto dummyFlow = simplexTwo.dummyFlow();
-			fprintf(stdout, "Flow: %d, idx: %d, tau: %d\n", dummyFlow, idxL,
-				tau[idxL]);
-
-			int it = 0;
-			int n_cuts = 0;
-
-			// Init the simplex
-			while (false) {
-				_status = simplexTwo.reRun();
-				if (_status == ProblemType::TIMELIMIT)
-					break;
-
+			double totF = A.balance();
+			while (_status != ProblemType::TIMELIMIT) {
 				// Check feasibility: if feasible stop
-				auto dummyFlow = simplexTwo.dummyFlow();
-				fprintf(stdout, "Flow: %d, idx: %d, tau: %d\n", dummyFlow, idxL,
-					tau[idxL]);
+				auto dummyFlow = simplexTwo.computeDummyFlow(dummy_arcs);
+				fprintf(stdout, "Flow: %d, idx: %d, tau: %d, fobj: %.5f\n", dummyFlow, idxL, tau[idxL - 1], double(dummyFlow) / totF);
 
-				if (abs(dummyFlow) < 1e-06 || idxL >= tau.size())
+				if (dummyFlow < 1 || idxL >= tau.size() - 1)
 					break;
 
 				// Add arcs
@@ -660,18 +641,13 @@ namespace DOT {
 						}
 					}
 
-				// TODO: update arcs cost
+				simplexTwo.updateArcs(dummy_arcs, tau[idxL]);
+				simplexTwo.recomputePotential();
 
-				/*for (size_t i = 0; i < n; ++i)
-					for (size_t j = 0; j < n; ++j)
-						simplexTwo.setArc(ID(i, j), 2 * n * n, tau[idxL]);
-				*///simplexTwo.updateDummyCost(tau[idxL]);
-				//simplexTwo.recomputePotential();
-
-				++it;
+				_status = simplexTwo.reRun();
 			}
 
-			_runtime += simplexTwo.runtime();
+			_runtime = simplexTwo.runtime();
 			_iterations += simplexTwo.iterations();
 			_num_arcs = simplexTwo.num_arcs();
 			_num_nodes = simplexTwo.num_nodes();
@@ -690,6 +666,252 @@ namespace DOT {
 			return fobj;
 		}
 
+		// Compute Kantorovich-Wasserstein distance between two measures
+		double phaseOne(const Histogram2D& A, const Histogram2D& B) {
+			size_t n = A.getN();
+
+			// Compute distances
+			std::set<int> tauset;
+			for (size_t v = 0; v < n; ++v)
+				for (size_t w = 0; w < n; ++w)
+					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
+
+			vector<int> tau;
+			for (auto v : tauset)
+				tau.push_back(v);
+
+			tau.push_back(tau.back() * 2);
+
+			fprintf(stdout, "distances: %d %d\n", tau.size(), tau[0]);
+
+			auto ID = [&n](int x, int y) { return x * n + y; };
+
+			int N = 2 * n * n;
+			vector<int> pi(N, 0);
+
+			Vars vars(N);
+			for (size_t i = 0; i < n; ++i)
+				for (size_t j = 0; j < n; ++j)
+					vars[ID(i, j)].a = ID(i, j);
+
+			Vars vnew;
+			vnew.reserve(N);
+
+			int TT = 16;
+			int idxLO = 0;
+			int idxUP = TT;
+			init_dist_from_to(tau[idxLO], tau[idxUP]);
+
+			// Build the graph for min cost flow
+			NetSimplexUnit simplex('E', static_cast<int>(2 * n * n), 0);
+
+			auto start_t = std::chrono::steady_clock::now();
+
+			// Set the parameters
+			simplex.setTimelimit(timelimit);
+			simplex.setVerbosity(verbosity);
+			simplex.setOptTolerance(opt_tolerance);
+
+			// add first d source nodes
+			for (size_t i = 0; i < n; ++i)
+				for (size_t j = 0; j < n; ++j)
+					simplex.addNode(ID(i, j), A.get(i, j));
+
+			for (size_t i = 0; i < n; ++i)
+				for (size_t j = 0; j < n; ++j)
+					simplex.addNode(n * n + ID(i, j), -B.get(i, j));
+
+			for (size_t i = 0; i < n; ++i)
+				for (size_t j = 0; j < n; ++j) {
+					for (const auto& p : coprimes) {
+						int v = p.v;
+						int w = p.w;
+						if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
+							simplex.addArc(ID(i, j), n * n + ID(i + v, j + w), p.c_vw);
+						}
+					}
+				}
+
+			int64_t fobj = 0;
+
+			// Init the simplex
+			simplex.run();
+
+			while (_status != ProblemType::TIMELIMIT) {
+				// Check feasibility: if feasible stop
+				auto dummyFlow = simplex.dummyFlow();
+				fprintf(stdout, "Flow: %ld, idx: %d, tau: [%d,%d)\n", dummyFlow, idxUP, tau[idxLO],
+					tau[idxUP]);
+
+				if (dummyFlow == 0 || idxUP >= tau.size() - 1)
+					break;
+
+				// Add arcs
+				idxLO = idxUP;
+				idxUP = std::min(idxUP + TT, (int)tau.size());
+				init_dist_from_to(tau[idxLO], tau[idxUP]);
+
+				for (size_t i = 0; i < n; ++i)
+					for (size_t j = 0; j < n; ++j) {
+						for (const auto& p : coprimes) {
+							int v = p.v;
+							int w = p.w;
+							if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
+								simplex.addArc(ID(i, j), n * n + ID(i + v, j + w), p.c_vw);
+							}
+						}
+					}
+				_status = simplex.reRun();
+			}
+
+
+			_runtime = simplex.runtime();
+			_iterations = simplex.iterations();
+			_num_arcs = simplex.num_arcs();
+			_num_nodes = simplex.num_nodes();
+
+			auto end_t = std::chrono::steady_clock::now();
+			auto _all =
+				double(std::chrono::duration_cast<std::chrono::milliseconds>(
+					end_t - start_t)
+					.count()) /
+				1000;
+
+			fobj = simplex.totalCost();
+
+			PRINT("PHASE ONE  | it: %d, fobj: %.6f, runtime: %.4f (simplex: %.4f), num_arcs: %ld\n", _iterations, fobj,
+				_all, _runtime, _num_arcs);
+
+			return fobj;
+		}
+
+		double colgen(const Histogram2D& A, const Histogram2D& B) {
+
+			size_t n = A.getN();
+
+			// Compute distances
+			std::set<int> tauset;
+			for (size_t v = 0; v < n; ++v)
+				for (size_t w = 0; w < n; ++w)
+					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
+
+			vector<int> tau;
+			for (auto v : tauset)
+				tau.push_back(v);
+
+			tau.push_back(tau.back() * 2);
+
+			size_t idxL = tau.size() / 10;
+			init_dist_upto(tau[idxL]);
+			fprintf(stdout, "Max distance: %d\n", tau[idxL]);
+
+			auto ID = [&n](int x, int y) { return x * n + y; };
+
+			int N = 2 * n * n;
+			vector<int> pi(N, 0);
+
+			Vars vars(N);
+			for (size_t i = 0; i < n; ++i)
+				for (size_t j = 0; j < n; ++j)
+					vars[ID(i, j)].a = ID(i, j);
+
+			Vars vnew;
+			vnew.reserve(N);
+
+			auto start_t = std::chrono::steady_clock::now();
+
+			// Build the graph for min cost flow
+			NetSimplex simplex('E', N, 0);
+
+			for (size_t i = 0; i < n; ++i)
+				for (size_t j = 0; j < n; ++j)
+					simplex.addNode(ID(i, j), A.get(i, j));
+
+			for (size_t i = 0; i < n; ++i)
+				for (size_t j = 0; j < n; ++j)
+					simplex.addNode(n * n + ID(i, j), -B.get(i, j));
+
+			// Set the parameters
+			simplex.setTimelimit(timelimit);
+			simplex.setVerbosity(verbosity);
+			simplex.setOptTolerance(opt_tolerance);
+
+			_status = simplex.run();
+
+			while (_status != ProblemType::TIMELIMIT) {
+
+				// Take the dual values
+				for (size_t j = 0; j < N; ++j)
+					pi[j] = -simplex.potential(j);
+
+				// Solve separation problem:
+#pragma omp parallel
+				{
+#pragma omp for schedule(dynamic, 1)
+					for (int i = 0; i < n; ++i)
+						for (int j = 0; j < n; ++j) {
+							double best_v = -FEASIBILITY_TOL;
+							double best_c = -1;
+							int best_n = 0; // best second node
+
+							for (const auto& p : coprimes) {
+								int v = p.v;
+								int w = p.w;
+								if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
+									double violation = p.c_vw - pi[ID(i, j)] + pi[n * n + ID(i + v, j + w)];
+									if (violation < best_v) {
+										best_v = violation;
+										best_c = p.c_vw;
+										best_n = n * n + ID(i + v, j + w);
+									}
+								}
+							}
+
+							// Store most violated cuts for element i
+							vars[ID(i, j)].b = best_n;
+							vars[ID(i, j)].c = best_c;
+						}
+				}
+
+
+				// Take all negative reduced cost variables
+				vnew.clear();
+				for (auto& v : vars) {
+					if (v.c > -1)
+						vnew.push_back(v);
+					v.c = -1;
+				}
+
+				if (vnew.empty())
+					break;
+
+				std::sort(vnew.begin(), vnew.end(),
+					[](const Var& v, const Var& w) { return v.c > w.c; });
+
+				// Replace old constraints with new ones
+				int new_arcs = simplex.updateArcs(vnew);
+
+				_status = simplex.reRun();
+			}
+
+			_runtime = simplex.runtime();
+			_iterations += simplex.iterations();
+			_num_arcs = simplex.num_arcs();
+			_num_nodes = simplex.num_nodes();
+
+			auto end_t = std::chrono::steady_clock::now();
+			auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+				end_t - start_t)
+				.count()) /
+				1000;
+
+			double fobj = double(simplex.totalCost()) / A.balance();
+
+			PRINT("COLEGN    | it: %d, fobj: %.6f, runtime: %.4f (simplex: %.4f), num_arcs: %ld\n", _iterations, fobj,
+				_all, _runtime, _num_arcs);
+
+			return fobj;
+		}
 
 		// Compute Kantorovich-Wasserstein distance between two measures
 		double lemon(const Histogram2D& A, const Histogram2D& B) {
@@ -835,25 +1057,34 @@ namespace DOT {
 
 			return fobj;
 		}
+
 		//--------------------------------------------------------------------------
-		void init_coprimes(int64_t L) {
+		void init_coprimes(int L) {
 			coprimes.clear();
 			for (int v = -L; v <= L; ++v)
-				for (int w = -L; w <= L; ++w) {
+				for (int w = -L; w <= L; ++w)
 					if (pow(v, 2) + pow(w, 2) == L)
 						coprimes.emplace_back(v, w, L);
-				}
 			coprimes.shrink_to_fit();
 		}
 
 		//--------------------------------------------------------------------------
-		void init_dist_upto(int64_t L) {
+		void init_dist_upto(int L) {
 			coprimes.clear();
 			for (int v = -L; v <= L; ++v)
-				for (int w = -L; w <= L; ++w) {
+				for (int w = -L; w <= L; ++w)
 					if (pow(v, 2) + pow(w, 2) <= L)
 						coprimes.emplace_back(v, w, pow(v, 2) + pow(w, 2));
-				}
+			coprimes.shrink_to_fit();
+		}
+
+		//--------------------------------------------------------------------------
+		void init_dist_from_to(int L, int U) {
+			coprimes.clear();
+			for (int v = -L; v <= L; ++v)
+				for (int w = -L; w <= L; ++w)
+					if (L <= pow(v, 2) + pow(w, 2) < U)
+						coprimes.emplace_back(v, w, pow(v, 2) + pow(w, 2));
 			coprimes.shrink_to_fit();
 		}
 

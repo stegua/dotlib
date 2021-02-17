@@ -276,7 +276,8 @@ namespace DOT {
 			_supply[i] = b;
 		}
 
-		void addArc(int a, int b, int c) {
+		size_t addArc(int a, int b, int c) {
+			size_t mm = _source.size();
 			_source.emplace_back(a);
 			_target.emplace_back(b);
 			_cost.emplace_back(c);
@@ -285,6 +286,7 @@ namespace DOT {
 			_state.emplace_back(STATE_LOWER);
 
 			_arc_num++;
+			return mm;
 		}
 
 		void setArc(size_t idx, int a, int b, int c) {
@@ -296,6 +298,13 @@ namespace DOT {
 			_state[_dummy_arc + idx] = STATE_LOWER;
 
 			_arc_num++;
+		}
+
+		int64_t computeDummyFlow(const vector<size_t>& as) const {
+			int64_t tot_flow = 0;
+			for (const auto e : as)
+				tot_flow += _flow[e];
+			return tot_flow;
 		}
 
 		int updateArcs(const Vars& as) {
@@ -312,7 +321,7 @@ namespace DOT {
 				while (e < e_max) {
 					// Replace useless variables with new variables
 					if (_state[e] == STATE_LOWER &&
-						(1 + _pi[_source[e]] - _pi[_target[e]] > 0))
+						(1 + _pi[_source[e]] - _pi[_target[e]] > 1))
 						break;
 					++e;
 				}
@@ -329,6 +338,22 @@ namespace DOT {
 				addArc(as[idx].a, as[idx].b, as[idx].c);
 				if (new_arc == 0)
 					_next_arc = e;
+				new_arc++;
+			}
+
+			return new_arc;
+		}
+
+
+		int addArcs(const Vars& as) {
+			int new_arc = 0;
+			size_t idx = 0;
+			size_t idx_max = as.size();
+
+			for (; idx < idx_max; ++idx) {
+				addArc(as[idx].a, as[idx].b, as[idx].c);
+				if (new_arc == 0)
+					_next_arc = _arc_num;
 				new_arc++;
 			}
 
@@ -434,9 +459,8 @@ namespace DOT {
 
 			// Check the sum of supply values
 			_sum_supply = 0;
-			for (int i = 0; i != _node_num; ++i) {
+			for (int i = 0; i != _node_num; ++i)
 				_sum_supply += _supply[i];
-			}
 
 			// Initialize artifical cost
 			int ART_COST;
@@ -448,7 +472,6 @@ namespace DOT {
 			}
 
 			// Set data for the artificial root node
-			// TODO: POSSO USARLI PER LA MASSA SBILANCIATA!
 			_root = _node_num;
 			_parent[_root] = -1;
 			_pred[_root] = -1;
