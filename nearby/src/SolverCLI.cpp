@@ -30,28 +30,31 @@ int main(int argc, char* argv[]) {
 
 		a.parse("C:\\Users\\Gualandi\\Google "
 			"Drive\\Ricerca\\DOTA\\data\\DOTmark_1."
-			"0\\Data\\ClassicImages\\data128_1001.csv");
+			"0\\Data\\ClassicImages\\data256_1001.csv");
 		b.parse("C:\\Users\\Gualandi\\Google "
 			"Drive\\Ricerca\\DOTA\\data\\DOTmark_1."
-			"0\\Data\\ClassicImages\\data128_1002.csv");
+			"0\\Data\\ClassicImages\\data256_1002.csv");
 
 		//std::string pp = "C:\\Users\\Gualandi\\Documents\\GitHub\\dotlib\\nearby\\msvc\\Neraby\\x64\\Debug\\";
 		//a.parse(pp + "test1.csv");
 		//b.parse(pp + "test2.csv");
 
 
-		PRINT("start solver %ld %ld\n", a.balance(), b.balance());
+		PRINT("start solver %lld %lld\n", a.balance(), b.balance());
+
 		DOT::Solver solver;
 
 		//double dist0 = solver.bipartite(a, b);
 
 		// TODO: FIX double dist1 = solver.tripartite(a, b);
 
-		//solver.phaseOne(a, b);
 
-		//solver.phaseTwo(a, b);
+		//	solver.phaseTwo(a, b);
 
-		solver.colgen(a, b);
+			//solver.colgen(a, b);
+
+		//solver.Winf(a, b);
+		solver.phaseOne(a, b);
 	}
 
 	if (false) {

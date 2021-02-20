@@ -12,10 +12,11 @@
 
 #include <lemon/list_graph.h>
 #include <lemon/network_simplex.h>
+#include <lemon/preflow.h>
 
 using namespace lemon;
 typedef lemon::ListDigraph LemonGraph;
-typedef int64_t LimitValueType;
+typedef int LimitValueType;
 typedef NetworkSimplex<LemonGraph, LimitValueType, LimitValueType> LemonSimplex;
 
 
@@ -135,12 +136,6 @@ namespace DOT {
 		// Standard c'tor
 		Histogram2D() {}
 
-		// Second c'tor
-		Histogram2D(int n, int* X, int* Y, int64_t* W) {
-			for (int i = 0; i < n; i++)
-				update(X[i], Y[i], W[i]);
-		}
-
 		// Third c'tor
 		Histogram2D(int _n) : n(_n) { data.resize(_n * _n, 0); }
 
@@ -213,9 +208,9 @@ namespace DOT {
 
 	private:
 		int n; // Histogram of size n*n
-		std::vector<int64_t>
-			data; // Histogram data a single array (contiguos in memory)
-	};          // namespace DOT
+		// Histogram data a single array (contiguos in memory)
+		std::vector<int64_t>	data;
+	};
 
 	// Solver class, which wrapper the Network Simplex algorithm
 	class Solver {
@@ -682,7 +677,7 @@ namespace DOT {
 
 			tau.push_back(tau.back() * 2);
 
-			fprintf(stdout, "distances: %d %d\n", tau.size(), tau[0]);
+			fprintf(stdout, "distances: %ld %dl\n", tau.size(), tau[0]);
 
 			auto ID = [&n](int x, int y) { return x * n + y; };
 
@@ -697,10 +692,10 @@ namespace DOT {
 			Vars vnew;
 			vnew.reserve(N);
 
-			int TT = 16;
+			int TT = 5;
 			int idxLO = 0;
-			int idxUP = TT;
-			init_dist_from_to(tau[idxLO], tau[idxUP]);
+			int idxUP = tau.size() / 10;
+			init_dist_from_to(tau, idxLO, idxUP);
 
 			// Build the graph for min cost flow
 			NetSimplexUnit simplex('E', static_cast<int>(2 * n * n), 0);
@@ -737,7 +732,7 @@ namespace DOT {
 			// Init the simplex
 			simplex.run();
 
-			while (_status != ProblemType::TIMELIMIT) {
+			while (false && _status != ProblemType::TIMELIMIT) {
 				// Check feasibility: if feasible stop
 				auto dummyFlow = simplex.dummyFlow();
 				fprintf(stdout, "Flow: %ld, idx: %d, tau: [%d,%d)\n", dummyFlow, idxUP, tau[idxLO],
@@ -749,7 +744,7 @@ namespace DOT {
 				// Add arcs
 				idxLO = idxUP;
 				idxUP = std::min(idxUP + TT, (int)tau.size());
-				init_dist_from_to(tau[idxLO], tau[idxUP]);
+				init_dist_from_to(tau, idxLO, idxUP);
 
 				for (size_t i = 0; i < n; ++i)
 					for (size_t j = 0; j < n; ++j) {
@@ -913,6 +908,102 @@ namespace DOT {
 			return fobj;
 		}
 
+		double Winf(const Histogram2D& A, const Histogram2D& B) {
+
+			size_t s = A.getN();
+			size_t d = s * s;
+
+			// Compute distances
+			std::set<int> tauset;
+			for (size_t v = 0; v < s; ++v)
+				for (size_t w = 0; w < s; ++w)
+					tauset.insert(pow(v, 2) + pow(w, 2));
+
+			vector<int> tau;
+			for (auto v : tauset)
+				tau.push_back(v);
+
+			auto start_t = std::chrono::steady_clock::now();
+
+			size_t idxL = tau.size() / 10;
+			init_dist_from_to(tau, tau[0], tau[idxL]);
+			idxL++;
+
+			fprintf(stdout, "distances: %d %d\n", tau.size(), tau[idxL - 1]);
+
+			LemonGraph g;
+
+			auto ID = [&s](size_t x, size_t y) {
+				return x * s + y;
+			};
+
+			// add d nodes for each histrogam (d+1) source, (d+2) target
+			std::vector<LemonGraph::Node> nodes;
+			// add first d source nodes
+			for (size_t i = 0; i < s; ++i)
+				for (size_t j = 0; j < s; ++j)
+					nodes.emplace_back(g.addNode());
+
+			for (size_t i = 0; i < s; ++i)
+				for (size_t j = 0; j < s; ++j)
+					nodes.emplace_back(g.addNode());
+
+			// Sink node
+			nodes.emplace_back(g.addNode());
+			nodes.emplace_back(g.addNode());
+
+			auto S = nodes[nodes.size() - 2];
+			auto T = nodes[nodes.size() - 1];
+
+			std::vector<LemonGraph::Arc> arcs;
+			std::vector<int> a_cap;
+
+			for (size_t i = 0; i < s; ++i)
+				for (size_t j = 0; j < s; ++j) {
+					for (const auto& p : coprimes) {
+						int v = p.v;
+						int w = p.w;
+						if (i + v >= 0 && i + v < s && j + w >= 0 && j + w < s) {
+							arcs.emplace_back(g.addArc(nodes[ID(i, j)], nodes[s * s + ID(i + v, j + w)]));
+							a_cap.emplace_back(std::min(A.get(i, j), B.get(i + v, j + w)));
+						}
+					}
+				}
+
+			for (size_t i = 0; i < s; ++i)
+				for (size_t j = 0; j < s; ++j) {
+					arcs.emplace_back(g.addArc(S, nodes[ID(i, j)]));
+					a_cap.emplace_back(A.get(i, j));
+				}
+
+			for (size_t i = 0; i < s; ++i)
+				for (size_t j = 0; j < s; ++j) {
+					arcs.emplace_back(g.addArc(nodes[s * s + ID(i, j)], T));
+					a_cap.emplace_back(B.get(i, j));
+				}
+
+			fprintf(stdout, "Input graph created with %d nodes and %d arcs\n", countNodes(g), countArcs(g));
+			ListDigraph::ArcMap<int> u_i(g);
+			for (size_t i = 0, i_max = arcs.size(); i < i_max; ++i) {
+				const auto& a = arcs[i];
+				u_i[a] = a_cap[i];
+			}
+
+
+			Preflow<LemonGraph> solver(g, u_i, S, T);
+			solver.runMinCut();
+
+			auto end_t = std::chrono::steady_clock::now();
+			auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+				end_t - start_t)
+				.count()) /
+				1000;
+
+			fprintf(stdout, "max flow value: %d, time: %.4f\n", solver.flowValue(), _all);
+
+		}
+
+
 		// Compute Kantorovich-Wasserstein distance between two measures
 		double lemon(const Histogram2D& A, const Histogram2D& B) {
 
@@ -920,12 +1011,12 @@ namespace DOT {
 			size_t d = s * s;
 
 			// Compute distances
-			std::set<int64_t> tauset;
+			std::set<int> tauset;
 			for (size_t v = 0; v < s; ++v)
 				for (size_t w = 0; w < s; ++w)
 					tauset.insert(pow(v, 2) + pow(w, 2));
 
-			vector<int64_t> tau;
+			vector<int> tau;
 			for (auto v : tauset)
 				tau.push_back(v);
 
@@ -1079,12 +1170,15 @@ namespace DOT {
 		}
 
 		//--------------------------------------------------------------------------
-		void init_dist_from_to(int L, int U) {
+		void init_dist_from_to(const vector<int>& data, int LO, int UP) {
 			coprimes.clear();
-			for (int v = -L; v <= L; ++v)
-				for (int w = -L; w <= L; ++w)
-					if (L <= pow(v, 2) + pow(w, 2) < U)
-						coprimes.emplace_back(v, w, pow(v, 2) + pow(w, 2));
+			for (int h = LO; h < UP; h++) {
+				int L = data[h];
+				for (int v = -L; v <= L; ++v)
+					for (int w = -L; w <= L; ++w)
+						if (pow(v, 2) + pow(w, 2) == L)
+							coprimes.emplace_back(v, w, L);
+			}
 			coprimes.shrink_to_fit();
 		}
 
