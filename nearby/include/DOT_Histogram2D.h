@@ -340,16 +340,16 @@ public:
     auto ID = [&n](int x, int y) { return x * n + y; };
 
     // add first d source nodes
-    for (size_t i = 0; i < n; ++i)
-      for (size_t j = 0; j < n; ++j)
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
         simplex.addNode(ID(i, j), A.get(i, j));
 
-    for (size_t i = 0; i < n; ++i)
-      for (size_t j = 0; j < n; ++j)
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
         simplex.addNode(n * n + ID(i, j), -B.get(i, j));
 
-    for (size_t i = 0; i < n; ++i)
-      for (size_t j = 0; j < n; ++j) {
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) {
         for (const auto &p : coprimes) {
           int v = p.v;
           int w = p.w;
@@ -385,12 +385,12 @@ public:
 
   // Compute Kantorovich-Wasserstein distance between two measures
   double tripartite(const Histogram2D &A, const Histogram2D &B) {
-    size_t n = A.getN();
+    int n = A.getN();
 
     auto start_t = std::chrono::steady_clock::now();
 
     // Build the graph for min cost flow
-    NetSimplex simplex('E', static_cast<int>(3 * n * n), 0);
+    NetSimplex simplex('F', 3 * n * n, n * n * n);
 
     // Set the parameters
     simplex.setTimelimit(timelimit);
@@ -400,35 +400,171 @@ public:
     auto ID = [&n](int x, int y) { return x * n + y; };
 
     // add first d source nodes
-    for (size_t i = 0; i < n; ++i)
-      for (size_t j = 0; j < n; ++j)
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
         simplex.addNode(ID(i, j), A.get(i, j));
 
-    for (size_t i = 0; i < n; ++i)
-      for (size_t j = 0; j < n; ++j)
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
         simplex.addNode(n * n + ID(i, j), 0);
 
-    for (size_t i = 0; i < n; ++i)
-      for (size_t j = 0; j < n; ++j)
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
         simplex.addNode(2 * n * n + ID(i, j), -B.get(i, j));
 
     // First layer
-    for (size_t i = 0; i < n; ++i)
-      for (size_t j = 0; j < n; ++j)
-        for (size_t h = 0; h < n; ++h) {
-          fprintf(stdout, "(%d, %d) -> (%d, %d)\n", i, j, h, j);
-          simplex.addArc(ID(i, j), n * n + ID(h, j), pow(h - i, 2));
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) {
+        for (int h = 0; h < n; ++h) {
+          // fprintf(stdout, "(%d, %d)#%d -> (%d, %d)#%d\t", i, j, ID(i, j), h,
+          // j,
+          //        n * n + ID(h, j));
+          simplex.addArc(ID(i, j), n * n + ID(h, j), (int)pow(h - i, 2));
         }
+        //        fprintf(stdout, "\n");
+      }
 
-    for (size_t i = 0; i < n; ++i)
-      for (size_t j = 0; j < n; ++j)
-        for (size_t h = 0; h < n; ++h) {
-          fprintf(stdout, "(%d, %d) -> (%d, %d)\n", i, j, i, h);
-          simplex.addArc(n * n + ID(i, j), 2 * n * n + ID(i, h), pow(h - j, 2));
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) {
+        for (int h = 0; h < n; ++h) {
+          // fprintf(stdout, "(%d, %d)#%d -> (%d, %d)#%d\t", i, j,
+          //        n * n + ID(i, j), i, h, 2 * n * n + ID(i, h));
+          simplex.addArc(n * n + ID(i, j), 2 * n * n + ID(i, h),
+                         (int)pow(h - j, 2));
         }
+        //       fprintf(stdout, "\n");
+      }
 
     // Init the simplex
     simplex.run();
+
+    _iterations = simplex.iterations();
+    _runtime = simplex.runtime();
+    _iterations = simplex.iterations();
+    _num_arcs = simplex.num_arcs();
+    _num_nodes = simplex.num_nodes();
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    double fobj = simplex.totalCost() / A.balance();
+
+    PRINT("TRIPARTIE | it: %d, fobj: %.6f, runtime: %.4f (simplex: %.4f), "
+          "num_arcs: %ld\n",
+          _iterations, fobj, _all, _runtime, _num_arcs);
+
+    return fobj;
+  }
+
+  double tripartiteColgen(const Histogram2D &A, const Histogram2D &B) {
+    int n = A.getN();
+    auto ID = [&n](int x, int y) { return x * n + y; };
+
+    int N = 3 * n * n;
+    vector<int> pi(N, 0);
+
+    Vars vars(2 * n * n);
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) {
+        vars[ID(i, j)].a = ID(i, j);
+        vars[n * n + ID(i, j)].a = n * n + ID(i, j);
+      }
+
+    Vars vnew;
+    vnew.reserve(2 * n * n);
+
+    auto start_t = std::chrono::steady_clock::now();
+
+    // Build the graph for min cost flow
+    NetSimplex simplex('E', 3 * n * n, 0);
+
+    // Set the parameters
+    simplex.setTimelimit(timelimit);
+    simplex.setVerbosity(verbosity);
+    simplex.setOptTolerance(opt_tolerance);
+
+    // add first d source nodes
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
+        simplex.addNode(ID(i, j), A.get(i, j));
+
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
+        simplex.addNode(n * n + ID(i, j), 0);
+
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
+        simplex.addNode(2 * n * n + ID(i, j), -B.get(i, j));
+
+    // Init the simplex
+    auto _status = simplex.run();
+
+    while (_status != ProblemType::TIMELIMIT) {
+      // Take the dual values
+      for (size_t j = 0; j < N; ++j)
+        pi[j] = -simplex.potential(j);
+
+        // Solve separation problem:
+#pragma omp parallel for collapse(2)
+      for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j) {
+          int best_v1 = 0;
+          int best_c1 = -1;
+          int best_n1 = 0; // best second node
+          int best_v2 = 0;
+          int best_c2 = -1;
+          int best_n2 = 0; // best second node
+          int H1 = ID(i, j);
+          int H2 = n * n + ID(i, j);
+
+          for (int h = 0; h < n; ++h) {
+            int dist = (h - i) * (h - i);
+            int violation = dist - pi[H1] + pi[n * n + ID(h, j)];
+
+            if (violation < best_v1) {
+              best_v1 = violation;
+              best_c1 = dist;
+              best_n1 = n * n + ID(h, j);
+            }
+
+            dist = (h - j) * (h - j);
+            violation = dist - pi[H2] + pi[2 * n * n + ID(i, h)];
+
+            if (violation < best_v2) {
+              best_v2 = violation;
+              best_c2 = dist;
+              best_n2 = 2 * n * n + ID(i, h);
+            }
+          }
+
+          vars[H1].b = best_n1;
+          vars[H1].c = best_c1;
+          vars[H2].b = best_n2;
+          vars[H2].c = best_c2;
+        }
+
+      // Take all negative reduced cost variables
+      vnew.clear();
+      for (auto &v : vars) {
+        if (v.c > -1)
+          vnew.push_back(v);
+        v.c = -1;
+      }
+
+      if (vnew.empty())
+        break;
+
+      std::sort(vnew.begin(), vnew.end(),
+                [](const Var &v, const Var &w) { return v.c > w.c; });
+
+      // Replace old constraints with new ones
+      int new_arcs = simplex.updateArcs(vnew);
+
+      _status = simplex.reRun();
+    }
 
     _iterations = simplex.iterations();
     _runtime = simplex.runtime();
@@ -565,7 +701,8 @@ public:
       return fobj;
     }
 
-    // ------------------------ PHASE TWO -----------------------------------
+    // ------------------------ PHASE TWO
+    // -----------------------------------
     ///*idxL = 3;
     // init_coprimes(tau[idxL]);
     // idxL++;*/
@@ -595,8 +732,12 @@ public:
     //		for (const auto& p : coprimes) {
     //			int v = p.v;
     //			int w = p.w;
-    //			if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n)
-    //{ 				simplexTwo.addArc(ID(i, j), n * n + ID(i
+    //			if (i + v >= 0 && i + v < n && j + w >= 0 && j +
+    // w
+    //<
+    // n) { 				simplexTwo.addArc(ID(i, j), n *
+    // n
+    // + ID(i
     //+ v,
     // j
     //+ w), p.c_vw);
@@ -870,34 +1011,30 @@ public:
         pi[j] = -simplex.potential(j);
 
         // Solve separation problem:
-#pragma omp parallel
-      {
-#pragma omp for schedule(dynamic, 1)
-        for (int i = 0; i < n; ++i)
-          for (int j = 0; j < n; ++j) {
-            double best_v = -FEASIBILITY_TOL;
-            double best_c = -1;
-            int best_n = 0; // best second node
-            int h = ID(i, j);
-            for (const auto &p : coprimes) {
-              int v = p.v;
-              int w = p.w;
-              if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
-                double violation =
-                    p.c_vw - pi[h] + pi[n * n + ID(i + v, j + w)];
-                if (violation < best_v) {
-                  best_v = violation;
-                  best_c = p.c_vw;
-                  best_n = n * n + ID(i + v, j + w);
-                }
+#pragma omp parallel for collapse(2)
+      for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j) {
+          int best_v = 0;
+          int best_c = -1;
+          int best_n = 0; // best second node
+          int h = ID(i, j);
+          for (const auto &p : coprimes) {
+            int v = p.v;
+            int w = p.w;
+            if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
+              int violation = p.c_vw - pi[h] + pi[n * n + ID(i + v, j + w)];
+              if (violation < best_v) {
+                best_v = violation;
+                best_c = p.c_vw;
+                best_n = n * n + ID(i + v, j + w);
               }
             }
-
-            // Store most violated cuts for element i
-            vars[h].b = best_n;
-            vars[h].c = best_c;
           }
-      }
+
+          // Store most violated cuts for element i
+          vars[h].b = best_n;
+          vars[h].c = best_c;
+        }
 
       // Take all negative reduced cost variables
       vnew.clear();
@@ -965,6 +1102,137 @@ public:
     }
 
     // delta = findUB(AA, BB) / A.balance();
+
+    PRINT("COLEGN %s it %lld LB %.6f UB %.6f runtime %.4f simplex %.4f "
+          "num_arcs %ld idx %d tau %d maxtau %d residual %.6f\n",
+          msg.c_str(), _iterations, fobj, delta, _all, _runtime, _num_arcs, TT,
+          tau[TT], tau[tau.size() - 1], unmoved);
+
+    return fobj;
+  }
+
+  double nearbyUB(const Histogram2D &A, const Histogram2D &B, int idxL,
+                  const std::string &msg) {
+    size_t n = A.getN();
+
+    // Compute distances
+    std::set<int> tauset;
+    for (size_t v = 0; v < n; ++v)
+      for (size_t w = 0; w < n; ++w)
+        tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
+
+    vector<int> tau;
+    for (auto v : tauset)
+      tau.push_back(v);
+
+    int TT = int(round(double(idxL) / 100.0 * (tau.size() - 1)));
+
+    init_dist_from_to(tau, 0, TT);
+
+    auto ID = [&n](int x, int y) { return x * n + y; };
+
+    int N = 2 * n * n;
+    vector<int> pi(N, 0);
+
+    Vars vars(N);
+    for (size_t i = 0; i < n; ++i)
+      for (size_t j = 0; j < n; ++j)
+        vars[ID(i, j)].a = ID(i, j);
+
+    Vars vnew;
+    vnew.reserve(N);
+
+    auto start_t = std::chrono::steady_clock::now();
+
+    // Build the graph for min cost flow
+    NetSimplex simplex('E', N, 0);
+
+    for (size_t i = 0; i < n; ++i)
+      for (size_t j = 0; j < n; ++j)
+        simplex.addNode(ID(i, j), A.get(i, j));
+
+    for (size_t i = 0; i < n; ++i)
+      for (size_t j = 0; j < n; ++j)
+        simplex.addNode(n * n + ID(i, j), -B.get(i, j));
+
+    // Set the parameters
+    simplex.setTimelimit(timelimit);
+    simplex.setVerbosity(verbosity);
+    simplex.setOptTolerance(opt_tolerance);
+
+    _status = simplex.run();
+
+    while (_status != ProblemType::TIMELIMIT) {
+      // Take the dual values
+      for (size_t j = 0; j < N; ++j)
+        pi[j] = -simplex.potential(j);
+
+        // Solve separation problem:
+#pragma omp parallel for collapse(2)
+      for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j) {
+          int best_v = 0;
+          int best_c = -1;
+          int best_n = 0; // best second node
+          int h = ID(i, j);
+          for (const auto &p : coprimes) {
+            int v = p.v;
+            int w = p.w;
+            if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
+              int violation = p.c_vw - pi[h] + pi[n * n + ID(i + v, j + w)];
+              if (violation < best_v) {
+                best_v = violation;
+                best_c = p.c_vw;
+                best_n = n * n + ID(i + v, j + w);
+              }
+            }
+          }
+
+          // Store most violated cuts for element i
+          vars[h].b = best_n;
+          vars[h].c = best_c;
+        }
+
+      // Take all negative reduced cost variables
+      vnew.clear();
+      for (auto &v : vars) {
+        if (v.c > -1)
+          vnew.push_back(v);
+        v.c = -1;
+      }
+
+      if (vnew.empty())
+        break;
+
+      std::sort(vnew.begin(), vnew.end(),
+                [](const Var &v, const Var &w) { return v.c > w.c; });
+
+      // Replace old constraints with new ones
+      int new_arcs = simplex.updateArcs(vnew);
+
+      _status = simplex.reRun();
+    }
+
+    _runtime = simplex.runtime();
+    _iterations = simplex.iterations();
+    _num_arcs = simplex.num_arcs();
+    _num_nodes = simplex.num_nodes();
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    double fobj = double(simplex.totalCost()) / A.balance();
+
+    // Upper bound on the missed mass
+    auto unmoved = 0.0;
+    // double(simplex.computeDummyFlow(left_arcs)) / A.balance();
+    double delta = 0.0;
+
+    vector<double> Aflow(n * n, 0.0);
+    vector<double> Bflow(n * n, 0.0);
 
     PRINT("COLEGN %s it %lld LB %.6f UB %.6f runtime %.4f simplex %.4f "
           "num_arcs %ld idx %d tau %d maxtau %d residual %.6f\n",

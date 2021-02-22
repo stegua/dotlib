@@ -121,7 +121,7 @@ private:
     int _next_arc;
 
     // Negative eps
-    const double negeps;
+    const int negeps;
 
   public:
     // Constructor
@@ -129,8 +129,7 @@ private:
         : _source(ns._source), _target(ns._target), _cost(ns._cost),
           _state(ns._state), _pi(ns._pi), _in_arc(ns.in_arc),
           _arc_num(ns._arc_num), _dummy_arc(ns._dummy_arc),
-          _next_arc(ns._next_arc),
-          negeps(std::nextafter(-ns._opt_tolerance, -0.0)) {
+          _next_arc(ns._next_arc), negeps(0) {
       // The main parameters of the pivot rule
       const double BLOCK_SIZE_FACTOR = 1;
       const int MIN_BLOCK_SIZE = 20;
@@ -205,13 +204,13 @@ public:
     _supply.resize(all_node_num, 0);
     _pi.resize(all_node_num);
 
-    _parent.resize(all_node_num);
-    _pred.resize(all_node_num);
-    _pred_dir.resize(all_node_num);
-    _thread.resize(all_node_num);
-    _rev_thread.resize(all_node_num);
-    _succ_num.resize(all_node_num);
-    _last_succ.resize(all_node_num);
+    _parent.resize(all_node_num);     // Parent
+    _pred.resize(all_node_num);       // Predecessor N -> E
+    _pred_dir.resize(all_node_num);   // Predecessor direction N -> {-1,1}
+    _thread.resize(all_node_num);     // Depth-first order for visiting the tree
+    _rev_thread.resize(all_node_num); // Reverse thread (?)
+    _succ_num.resize(all_node_num);   // Number of successors?
+    _last_succ.resize(all_node_num);  // Last successor?
 
     // 2*n arcs from nodes to root and from root to node;
     // 2*n-1 nodes in a basic solution
@@ -343,7 +342,7 @@ public:
       while (e < e_max) {
         // Replace useless variables with new variables
         if (_state[e] == STATE_LOWER &&
-            (_cost[e] + _pi[_source[e]] - _pi[_target[e]] > 1))
+            (_cost[e] + _pi[_source[e]] - _pi[_target[e]] > 0))
           break;
         ++e;
       }

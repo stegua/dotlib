@@ -30,8 +30,37 @@ int main(int argc, char *argv[]) {
     std::string base = "C:\\Users\\Gualandi\\Google "
                        "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
 
+    DOT::Histogram2D a;
+    DOT::Histogram2D b;
+
+    std::string f1 = "data32_1006.csv";
+    std::string f2 = "data32_1007.csv";
+
+    a.parse(base + "Shapes" + SEP + f1);
+    b.parse(base + "Shapes" + SEP + f2);
+
+    // a.parse("C:"
+    //        "\\Users\\gualandi\\Documents\\GitHub\\dotlib\\nearby\\msvc\\Neraby"
+    //        "\\x64\\Release\\test1.csv");
+    // b.parse("C:"
+    //        "\\Users\\gualandi\\Documents\\GitHub\\dotlib\\nearby\\msvc\\Neraby"
+    //        "\\x64\\Release\\test2.csv");
+
+    std::string msg = "ClassicImages";
+
+    DOT::Solver solver;
+
+    // solver.tripartiteColgen(a, b);
+    solver.nearbyUB(a, b, 20, msg);
+  }
+  if (false) {
+    std::string SEP = "\\";
+
+    std::string base = "C:\\Users\\Gualandi\\Google "
+                       "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
+
     std::vector<std::string> dirs = {
-        "ClassicImages", "Shapes"
+        "ClassicImages", //"Shapes"
         //"WhiteNoise", "CauchyDensity", "GRFmoderate","MicroscopyImages",
         //"GRFrough", "GRFsmooth", "LogGRF", "LogitGRF",,
     };
@@ -40,8 +69,7 @@ int main(int argc, char *argv[]) {
         "1001.csv", "1002.csv", "1003.csv", "1004.csv", "1005.csv",
         "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"};
 
-    std::vector<std::string> Ss = {"32"};
-    //, "64", "128", "256", "512"};
+    std::vector<std::string> Ss = {"32", "64", "128", "256", "512"};
 
     for (const auto &dtype : dirs) {
       for (const auto &S : Ss) {
@@ -61,9 +89,9 @@ int main(int argc, char *argv[]) {
 
               DOT::Solver solver;
 
-              for (int tau : {1,  5,  10, 15, 20, 25, 30, 35, 40, 45,
-                              50, 55, 60, 65, 70, 75, 80, 85, 95, 100})
-                solver.colgen(a, b, tau, msg);
+              // for (int tau : {1,  5,  10, 15, 20, 25, 30, 35, 40, 45,
+              //                50, 55, 60, 65, 70, 75, 80, 85, 95, 100})
+              solver.colgen(a, b, 15, msg);
             }
         }
       }

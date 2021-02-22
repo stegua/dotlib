@@ -718,10 +718,12 @@ private:
   void updatePotential() {
     int sigma = _pi[v_in] - _pi[u_in] - _pred_dir[u_in];
     int end = _thread[_last_succ[u_in]];
-
+    int cc = 0;
     if (sigma != 0)
-      for (int u = u_in; u != end; u = _thread[u])
+      for (int u = u_in; u != end; u = _thread[u], cc++)
         _pi[u] += sigma;
+
+    fprintf(stdout, "%d\t", cc);
   }
 
   // Execute the algorithm
