@@ -160,6 +160,7 @@
     <ClInclude Include="..\..\..\include\DOT_Histogram2D.h" />
     <ClInclude Include="..\..\..\include\DOT_NetSimplex.h" />
     <ClInclude Include="..\..\..\include\DOT_NetSimplexUnit.h" />
+    <ClInclude Include="..\..\..\include\DOT_Solver.h" />
     <ClInclude Include="..\..\..\include\network_simplex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
