@@ -14,6 +14,7 @@
 #include "DOT_NetSimplex.h"
 #include "DOT_NetSimplexUnit.h"
 
+
 struct coprimes_t {
 public:
 	coprimes_t(int _v, int _w, int _c) : v(_v), w(_w), c_vw(_c) {}
@@ -327,7 +328,7 @@ __global__ void naivePricingUnroll2(
 
 __global__ void naivePricingUnroll(
 	int Nv, int* d_V, int* d_W, int* d_Pvw,
-	int* d_PI, int* d_VarB, int* d_VarC)
+	int* d_PI, int* d_Var)
 {
 
 	// set thread ID
@@ -522,10 +523,10 @@ __global__ void naivePricingUnroll(
 		// write result for this block to global mem
 		if (tid == 0) {
 			int idx = X * n + Y;
-			d_VarC[idx] = -1;
+			d_Var[idx] = -1;
 			if (viol[tid] < 0) {
-				d_VarB[idx] = best_n[tid];
-				d_VarC[idx] = best_c[tid];
+				d_Var[idx] = best_c[tid];
+				d_Var[NN + idx] = best_n[tid];
 			}
 		}
 	}
@@ -1430,22 +1431,6 @@ namespace DOT {
 			const std::string& msg) {
 			int n = A.getN();
 
-			// Compute distances
-			std::set<int> tauset;
-			for (int v = 0; v < n; ++v)
-				for (int w = 0; w < n; ++w)
-					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
-
-			vector<int> tau;
-			for (auto v : tauset)
-				tau.push_back(v);
-			fprintf(stdout, "distances: %lld\n", tau.size());
-
-			int TT = std::min<int>(1024, static_cast<int>(tau.size() - 1));
-			init_dist_from_to(tau, 0, TT, true);
-
-			fprintf(stdout, "coprimes size: %lld\n", coprimes.size());
-
 			auto ID = [&n](int x, int y) { return x * n + y; };
 
 			int N = 2 * n * n;
@@ -1549,9 +1534,8 @@ namespace DOT {
 
 			// Upper bound on the missed mass
 			PRINT("COLGEN %s it %lld LB %.6f runtime %.4f simplex %.4f "
-				"num_arcs %lld idx %d tau %d maxtau %d\n",
-				msg.c_str(), _iterations, fobj, _all, _runtime, _num_arcs, TT,
-				tau[TT], tau[tau.size() - 1]);
+				"num_arcs %lld\n",
+				msg.c_str(), _iterations, fobj, _all, _runtime, _num_arcs);
 
 			return fobj;
 		}
@@ -1560,22 +1544,18 @@ namespace DOT {
 		double colgenCuda(const Histogram2D& A, const Histogram2D& B, int idxL,
 			const std::string& msg) {
 			int n = A.getN();
+			int NN = n * n;
+			int NN2 = 2 * n * n;
 
-			// Compute distances
-			std::set<int> tauset;
-			for (int v = 0; v < n; ++v)
-				for (int w = 0; w < n; ++w)
-					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
+			auto ID = [&n](int x, int y) { return x * n + y; };
 
-			vector<int> tau;
-			for (auto v : tauset)
-				tau.push_back(v);
-			fprintf(stdout, "distances: %lld\n", tau.size());
+			vector<int> vars(NN, 0);
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
+					vars[ID(i, j)] = ID(i, j);
 
-			int TT = std::min<int>(1024, static_cast<int>(tau.size() - 1));
-			init_dist_from_to(tau, 0, TT, true);
-
-			fprintf(stdout, "coprimes size: %lld\n", coprimes.size());
+			Vars vnew;
+			vnew.reserve(NN);
 
 			int* h_V = (int*)malloc(BLOCKNUM * BLOCKSIZE * sizeof(int));
 			int* h_W = (int*)malloc(BLOCKNUM * BLOCKSIZE * sizeof(int));
@@ -1594,48 +1574,13 @@ namespace DOT {
 					h_Pvw[hh] = INT_MAX;
 				}
 
-
-			auto ID = [&n](int x, int y) { return x * n + y; };
-
-			int N = 2 * n * n;
-			vector<int> pi(N, 0);
-
-			Vars vars(n * n);
-			for (int i = 0; i < n; ++i)
-				for (int j = 0; j < n; ++j)
-					vars[ID(i, j)].a = ID(i, j);
-
-			Vars vnew;
-			vnew.reserve(n * n);
-
-			int* h_VarB = (int*)malloc(n * n * sizeof(int));
-			int* h_VarC = (int*)malloc(n * n * sizeof(int));
-			memset(h_VarB, -1, n * n * sizeof(int));
-			memset(h_VarC, -1, n * n * sizeof(int));
-
-
-			// Build the graph for min cost flow
-			NetSimplex simplex('E', N, 0);
-
-			for (int i = 0; i < n; ++i)
-				for (int j = 0; j < n; ++j)
-					simplex.addNode(ID(i, j), A.get(i, j));
-
-			for (int i = 0; i < n; ++i)
-				for (int j = 0; j < n; ++j)
-					simplex.addNode(n * n + ID(i, j), -B.get(i, j));
-
-			// Set the parameters
-			simplex.setTimelimit(timelimit);
-			simplex.setVerbosity(verbosity);
-			simplex.setOptTolerance(opt_tolerance);
+			int Z0 = std::min<int>(BLOCKSIZE * BLOCKNUM, static_cast<int>(coprimes.size()));
 
 			// Data for CUDA support 
 			// set up device
 			int dev = 0;
 			cudaDeviceProp deviceProp;
 			cudaGetDeviceProperties(&deviceProp, dev);
-			printf("device %d: %s ", dev, deviceProp.name);
 			cudaSetDevice(dev);
 
 			int* d_V;
@@ -1650,49 +1595,60 @@ namespace DOT {
 			CHECK(cudaMemcpy(d_W, h_W, Nv, cudaMemcpyHostToDevice));
 			CHECK(cudaMemcpy(d_Pvw, h_Pvw, Nv, cudaMemcpyHostToDevice));
 
-			/*for (size_t hh = 0; hh < BLOCKNUM * BLOCKSIZE; hh++) {
-				fprintf(stdout, "%d %d %d\n", h_V[hh], h_W[hh], h_Pvw[hh]);
-			}
-			return 0;*/
-
-			//fprintf(stdout, "First step\n");
-			//fflush(stdout);
-
+			// Size for dual variables
+			size_t Npi = NN2 * sizeof(int);
+			int* h_PI;
 			int* d_PI;
-			int* d_VarB;
-			int* d_VarC;
-			size_t Npi = 2 * n * n * sizeof(int);
-			size_t Nvar = n * n * sizeof(int);
+			CHECK(cudaMallocHost((void**)&h_PI, Npi));
 			CHECK(cudaMalloc((void**)&d_PI, Npi));
-			CHECK(cudaMalloc((void**)&d_VarB, Nvar));
-			CHECK(cudaMalloc((void**)&d_VarC, Nvar));
+
+
+			size_t Nvar = NN2 * sizeof(int);
+			int* h_Var;
+			int* d_Var;
+			CHECK(cudaMallocHost((void**)&h_Var, Nvar));
+			CHECK(cudaMalloc((void**)&d_Var, Nvar));
 
 			const dim3 blockSize(BLOCKSIZE, 1);
 			const dim3 gridSize(n, n, 1);
 
-			int Z0 = std::min<int>(BLOCKSIZE * BLOCKNUM, static_cast<int>(coprimes.size()));
+
+			// Build the graph for min cost flow
+			auto start_t = std::chrono::steady_clock::now();
+
+			NetSimplex simplex('E', NN2, 0);
+
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
+					simplex.addNode(ID(i, j), A.get(i, j));
+
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
+					simplex.addNode(n * n + ID(i, j), -B.get(i, j));
+
+			// Set the parameters
+			simplex.setTimelimit(timelimit);
+			simplex.setVerbosity(verbosity);
+			simplex.setOptTolerance(opt_tolerance);
 
 			_status = simplex.run();
 
-			auto start_t = std::chrono::steady_clock::now();
-
 			while (_status != ProblemType::TIMELIMIT) {
 				// Take the dual values
-				for (int j = 0; j < N; ++j)
-					pi[j] = -simplex.potential(j);
+				for (int j = 0; j < NN2; ++j)
+					h_PI[j] = -simplex.potential(j);
 
-				CHECK(cudaMemcpy(d_PI, &pi[0], Npi, cudaMemcpyHostToDevice));
+				CHECK(cudaMemcpy(d_PI, h_PI, Npi, cudaMemcpyHostToDevice));
 
-				naivePricingUnroll << <gridSize, blockSize >> > (Z0, d_V, d_W, d_Pvw, d_PI, d_VarB, d_VarC);
+				naivePricingUnroll << <gridSize, blockSize >> > (Z0, d_V, d_W, d_Pvw, d_PI, d_Var);
 
-				CHECK(cudaMemcpy(h_VarB, d_VarB, Nvar, cudaMemcpyDeviceToHost));
-				CHECK(cudaMemcpy(h_VarC, d_VarC, Nvar, cudaMemcpyDeviceToHost));
+				CHECK(cudaMemcpy(h_Var, d_Var, Nvar, cudaMemcpyDeviceToHost));
 
 				// Take all negative reduced cost variables
 				vnew.clear();
-				for (int h = 0, h_max = n * n; h < h_max; ++h)
-					if (h_VarC[h] > -1)
-						vnew.emplace_back(vars[h].a, h_VarB[h], h_VarC[h]);
+				for (int h = 0, h_max = NN; h < h_max; ++h)
+					if (h_Var[h] > -1)
+						vnew.emplace_back(vars[h], h_Var[NN + h], h_Var[h]);
 
 				if (vnew.empty())
 					break;
@@ -1721,21 +1677,25 @@ namespace DOT {
 
 
 			// Upper bound on the missed mass
-			auto unmoved = 0.0;// double(simplex.computeDummyFlow(left_arcs)) / A.balance();
 			double delta = 0.0;
 
 			PRINT("COCUDA %s it %lld LB %.6f UB %.6f runtime %.4f simplex %.4f "
-				"num_arcs %ld idx %d tau %d maxtau %d residual %.6f\n",
-				msg.c_str(), _iterations, fobj, delta, _all, _runtime, _num_arcs, TT,
-				tau[TT], tau[tau.size() - 1], unmoved);
+				"num_arcs %lld\n",
+				msg.c_str(), _iterations, fobj, delta, _all, _runtime, _num_arcs);
 
 			// free device memory
 			cudaFree(d_V);
 			cudaFree(d_W);
 			cudaFree(d_Pvw);
 			cudaFree(d_PI);
-			cudaFree(d_VarB);
-			cudaFree(d_VarC);
+			cudaFree(d_Var);
+
+			cudaFreeHost(h_Var);
+			cudaFreeHost(h_PI);
+
+			free(h_V);
+			free(h_W);
+			free(h_Pvw);
 			cudaDeviceReset();
 
 			return fobj;
@@ -1744,20 +1704,6 @@ namespace DOT {
 		double nearbyUB(const Histogram2D& A, const Histogram2D& B, int idxL,
 			const std::string& msg) {
 			int n = A.getN();
-
-			// Compute distances
-			std::set<int> tauset;
-			for (int v = 0; v < n; ++v)
-				for (int w = 0; w < n; ++w)
-					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
-
-			vector<int> tau;
-			for (auto v : tauset)
-				tau.push_back(v);
-
-			int TT = int(round(double(idxL) / 100.0 * (tau.size() - 1)));
-
-			init_dist_from_to(tau, 0, TT);
 
 			auto ID = [&n](int x, int y) { return x * n + y; };
 
@@ -1857,14 +1803,12 @@ namespace DOT {
 			double fobj = double(simplex.totalCost()) / A.balance();
 
 			// Upper bound on the missed mass
-			auto unmoved = 0.0;
 			// double(simplex.computeDummyFlow(left_arcs)) / A.balance();
 			double delta = 0.0;
 
 			PRINT("COLEGN %s it %lld LB %.6f UB %.6f runtime %.4f simplex %.4f "
-				"num_arcs %ld idx %d tau %d maxtau %d residual %.6f\n",
-				msg.c_str(), _iterations, fobj, delta, _all, _runtime, _num_arcs, TT,
-				tau[TT], tau[tau.size() - 1], unmoved);
+				"num_arcs %lld\n",
+				msg.c_str(), _iterations, fobj, delta, _all, _runtime, _num_arcs);
 
 			return fobj;
 		}
@@ -2176,6 +2120,19 @@ namespace DOT {
 				std::sort(coprimes.begin(), coprimes.end(),
 					[](const auto& a, const auto& b) { return a.c_vw < b.c_vw; });
 
+			//fprintf(stdout, "__device__ int s_V[8192] = {");
+			//for (int i = 0; i < 1024 * 8; i++)
+			//	fprintf(stdout, "%d, ", coprimes[i].v);
+			//fprintf(stdout, "};\n");
+			//fprintf(stdout, "__device__ int s_W[8192] = {");
+			//for (int i = 0; i < 1024 * 8; i++)
+			//	fprintf(stdout, "%d, ", coprimes[i].w);
+			//fprintf(stdout, "};\n");
+			//fprintf(stdout, "__device__ int s_Pvw[8192] = {");
+			//for (int i = 0; i < 1024 * 8; i++)
+			//	fprintf(stdout, "%d, ", coprimes[i].c_vw);
+			//fprintf(stdout, "};\n");
+
 			coprimes.shrink_to_fit();
 		}
 
@@ -2191,6 +2148,9 @@ namespace DOT {
 				std::sort(coprimes.begin(), coprimes.end(),
 					[](const auto& a, const auto& b) { return a.c_vw < b.c_vw; });
 		}
+
+		// List of pair of coprimes number between (-L, L)
+		std::vector<coprimes_t> coprimes;
 
 	private:
 		// Status of the solver
@@ -2211,8 +2171,6 @@ namespace DOT {
 		// Approximation parameter
 		int L;
 
-		// List of pair of coprimes number between (-L, L)
-		std::vector<coprimes_t> coprimes;
 
 		// Method to solve the problem
 		std::string method;
@@ -2229,6 +2187,6 @@ namespace DOT {
 		// Time limit for runtime of the algorithm
 		double timelimit;
 
-		}; // namespace DOT
+	}; // namespace DOT
 
-	} // namespace DOT
+} // namespace DOT
