@@ -36,7 +36,7 @@ namespace DOT {
 
 			// Read first line
 			auto read_row = [&](size_t i) {
-				size_t j = 0;
+				int j = 0;
 				std::string line;
 				std::getline(in_file, line);
 				std::stringstream lineStream(line);

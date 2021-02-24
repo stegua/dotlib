@@ -94,7 +94,7 @@ namespace DOT {
 
 		double _timelimit;
 		std::string _verbosity;
-		double _opt_tolerance;
+		int _opt_tolerance;
 
 		int N_IT_LOG;
 
@@ -129,7 +129,7 @@ namespace DOT {
 				: _source(ns._source), _target(ns._target), _cost(ns._cost),
 				_state(ns._state), _pi(ns._pi), _in_arc(ns.in_arc),
 				_arc_num(ns._arc_num), _dummy_arc(ns._dummy_arc),
-				_next_arc(ns._next_arc), negeps(0) {
+				_next_arc(ns._next_arc), negeps(ns._opt_tolerance) {
 				// The main parameters of the pivot rule
 				const double BLOCK_SIZE_FACTOR = 1;
 				const int MIN_BLOCK_SIZE = 20;
@@ -142,7 +142,7 @@ namespace DOT {
 
 			// Find next entering arc
 			bool findEnteringArc() {
-				int min = 0;
+				int min = negeps;
 
 				int cnt = _block_size;
 
@@ -244,7 +244,7 @@ namespace DOT {
 			N_IT_LOG = 1000; // check runtime every IT_LOG iterations
 			_timelimit = std::numeric_limits<double>::max();
 			_verbosity = DOT_VAL_INFO;
-			_opt_tolerance = 1e-06;
+			_opt_tolerance = 0;
 			_iterations = 0;
 			// Benchmarking
 			t1 = 0.0, t2 = 0.0, t3 = 0.0, t4 = 0.0, t5 = 0.0, t6 = 0.0;
@@ -272,7 +272,7 @@ namespace DOT {
 			// Reset arc variables
 			for (int e = 0; e < _arc_num; ++e) {
 				_state[e] = STATE_LOWER;
-				_flow[e] = 0.0;
+				_flow[e] = 0;
 			}
 
 			if (!init())
@@ -449,7 +449,7 @@ namespace DOT {
 			_timelimit = t;
 			//    PRINT("INFO: change <timelimit> to %f\n", t);
 		}
-		void setOptTolerance(double o) {
+		void setOptTolerance(int o) {
 			_opt_tolerance = o;
 			//    PRINT("INFO: change <opt_tolerance> to %f\n", o);
 		}
@@ -870,22 +870,22 @@ namespace DOT {
 
 				// Add as log file
 				_iterations++;
-				if (N_IT_LOG > 0) {
-					if (_iterations % N_IT_LOG == 0) {
-						auto end_t = std::chrono::steady_clock::now();
-						double tot =
-							double(std::chrono::duration_cast<std::chrono::nanoseconds>(
-								end_t - start_tt)
-								.count()) /
-							1000000000;
-						if (tot > _timelimit)
-							return ProblemType::TIMELIMIT;
-						if (_verbosity == DOT_VAL_DEBUG)
-							PRINT("NetSIMPLEX inner loop | it: %ld, distance: %.4f, runtime: "
-								"%.4f\n",
-								_iterations, totalCost(), tot);
-					}
-				}
+				//if (N_IT_LOG > 0) {
+				//	if (_iterations % N_IT_LOG == 0) {
+				//		auto end_t = std::chrono::steady_clock::now();
+				//		double tot =
+				//			double(std::chrono::duration_cast<std::chrono::nanoseconds>(
+				//				end_t - start_tt)
+				//				.count()) /
+				//			1000000000;
+				//		if (tot > _timelimit)
+				//			return ProblemType::TIMELIMIT;
+				//		if (_verbosity == DOT_VAL_DEBUG)
+				//			PRINT("NetSIMPLEX inner loop | it: %ld, distance: %.4f, runtime: "
+				//				"%.4f\n",
+				//				_iterations, totalCost(), tot);
+				//	}
+				//}
 			}
 
 			auto end_t = std::chrono::steady_clock::now();

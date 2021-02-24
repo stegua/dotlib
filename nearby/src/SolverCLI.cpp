@@ -33,18 +33,18 @@ int main(int argc, char* argv[]) {
 		DOT::Histogram2D a;
 		DOT::Histogram2D b;
 
-		std::string f1 = "data32_1006.csv";
-		std::string f2 = "data32_1007.csv";
+		std::string f1 = "data128_1006.csv";
+		std::string f2 = "data128_1007.csv";
 
 		a.parse(base + "Shapes" + SEP + f1);
 		b.parse(base + "Shapes" + SEP + f2);
 
-		// a.parse("C:"
-		//        "\\Users\\gualandi\\Documents\\GitHub\\dotlib\\nearby\\msvc\\Neraby"
-		//        "\\x64\\Release\\test1.csv");
-		// b.parse("C:"
-		//        "\\Users\\gualandi\\Documents\\GitHub\\dotlib\\nearby\\msvc\\Neraby"
-		//        "\\x64\\Release\\test2.csv");
+		//a.parse("C:"
+		//	"\\Users\\gualandi\\Documents\\GitHub\\dotlib\\nearby\\msvc\\Neraby"
+		//	"\\x64\\Release\\test1.csv");
+		//b.parse("C:"
+		//	"\\Users\\gualandi\\Documents\\GitHub\\dotlib\\nearby\\msvc\\Neraby"
+		//	"\\x64\\Release\\test2.csv");
 
 		std::string msg = "ClassicImages";
 
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 
 		//solver.tripartiteColgen(a, b);
 		//solver.bipartite(a, b);
-		solver.colgen(a, b, 20, msg);
+		solver.colgenCuda(a, b, 20, msg);
 	}
 	if (false) {
 		std::string SEP = "\\";

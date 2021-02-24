@@ -41,6 +41,495 @@ namespace std {
 
 } // namespace std
 
+// Zeta block for coordinates vector
+#define BLOCKSIZE 1024
+#define BLOCKNUM 8
+
+// Taken from: 
+#define CHECK(call)                                                            \
+{                                                                              \
+    const cudaError_t error = call;                                            \
+    if (error != cudaSuccess)                                                  \
+    {                                                                          \
+        fprintf(stderr, "Error: %s:%d, ", __FILE__, __LINE__);                 \
+        fprintf(stderr, "code: %d, reason: %s\n", error,                       \
+                cudaGetErrorString(error));                                    \
+        exit(1);                                                               \
+    }                                                                          \
+}
+
+
+__global__ void naivePricing(
+	int Z0,
+	int Nv, int* d_V, int* d_W, int* d_Pvw,
+	int Npi, int* d_PI,
+	int Nvar, int* d_VarB, int* d_VarC)
+{
+	int tid = threadIdx.x;
+
+	// set thread ID
+	__shared__ int viol[BLOCKSIZE];
+
+	viol[tid] = 0;
+
+	if (tid >= Z0)
+		return;
+
+	__shared__ int best_c[BLOCKSIZE];
+	__shared__ int best_n[BLOCKSIZE];
+
+	int X = blockIdx.x;
+	int Y = blockIdx.y;
+	int n = gridDim.x;
+
+	int Xv = X + d_V[tid];
+	int Yw = Y + d_W[tid];
+
+	//printf("Tid: %d %d %d - Bid: %d %d %d - Bdim: %d %d %d - Gdim: %d %d %d - Pid: %d \n",
+	//	threadIdx.x, threadIdx.y, threadIdx.z,
+	//	blockIdx.x, blockIdx.y, blockIdx.z,
+	//	blockDim.x, blockDim.y, blockDim.z,
+	//	gridDim.x, gridDim.y, gridDim.z,
+	//	blockDim.x * threadIdx.y + tid);
+
+	if (Xv >= 0 && Xv < n && Yw >= 0 && Yw < n) {
+		int p = d_Pvw[tid];
+		int idx2 = n * n + (Xv)*n + (Yw);
+		viol[tid] = p - d_PI[X * n + Y] + d_PI[idx2];
+		best_c[tid] = p;
+		best_n[tid] = idx2;
+	}
+
+	// synchronize within block
+	__syncthreads();
+
+	// in-place reduction in global memory
+	//for (int stride = 1; stride < blockDim.x; stride *= 2) {
+	//	//	//if ((tid % (2 * stride)) == 0) {
+	//	//	//	if (viol[tid] > viol[tid + stride]) {
+	//	//	//		viol[tid] = viol[tid + stride];
+	//	//	//		best_c[tid] = best_c[tid + stride];
+	//	//	//		best_n[tid] = best_n[tid + stride];
+	//	//	//	}
+	//	//	//}
+
+	//	int index = 2 * stride * tid;
+
+	//	if (index < blockDim.x && viol[index] > viol[index + stride]) {
+	//		viol[index] = viol[index + stride];
+	//		best_c[index] = best_c[index + stride];
+	//		best_n[index] = best_n[index + stride];
+	//	}
+
+	//	// synchronize within block
+	//	__syncthreads();
+	//}
+
+	// in-place reduction in global memory
+	for (int stride = blockDim.x / 2; stride > 32; stride >>= 1)
+	{
+		if (tid < stride && viol[tid] > viol[tid + stride]) {
+			viol[tid] = viol[tid + stride];
+			best_c[tid] = best_c[tid + stride];
+			best_n[tid] = best_n[tid + stride];
+		}
+
+		__syncthreads();
+	}
+
+
+	// unrolling warp
+	if (tid < 32)
+	{
+		volatile int* vme1 = viol;
+		volatile int* vme2 = best_c;
+		volatile int* vme3 = best_n;
+		if (vme1[tid] > vme1[tid + 32]) {
+			vme1[tid] = vme1[tid + 32];
+			vme2[tid] = vme2[tid + 32];
+			vme3[tid] = vme3[tid + 32];
+		}
+		if (vme1[tid] > vme1[tid + 16]) {
+			vme1[tid] = vme1[tid + 16];
+			vme2[tid] = vme2[tid + 16];
+			vme3[tid] = vme3[tid + 16];
+		}
+		if (vme1[tid] > vme1[tid + 8]) {
+			vme1[tid] = vme1[tid + 8];
+			vme2[tid] = vme2[tid + 8];
+			vme3[tid] = vme3[tid + 8];
+		}
+		if (vme1[tid] > vme1[tid + 4]) {
+			vme1[tid] = vme1[tid + 4];
+			vme2[tid] = vme2[tid + 4];
+			vme3[tid] = vme3[tid + 4];
+		}
+		if (vme1[tid] > vme1[tid + 2]) {
+			vme1[tid] = vme1[tid + 2];
+			vme2[tid] = vme2[tid + 2];
+			vme3[tid] = vme3[tid + 2];
+		}
+		if (vme1[tid] > vme1[tid + 1]) {
+			vme1[tid] = vme1[tid + 1];
+			vme2[tid] = vme2[tid + 1];
+			vme3[tid] = vme3[tid + 1];
+		}
+		// write result for this block to global mem
+		if (tid == 0) {
+			int idx = X * n + Y;
+			d_VarC[idx] = -1;
+			if (viol[tid] < 0) {
+				d_VarB[idx] = best_n[tid];
+				d_VarC[idx] = best_c[tid];
+			}
+		}
+	}
+}
+
+
+__global__ void naivePricingUnroll2(
+	int Nv, int* d_V, int* d_W, int* d_Pvw,
+	int* d_PI, int* d_VarB, int* d_VarC)
+{
+	unsigned int tid = threadIdx.x;
+
+	// set thread ID
+	__shared__ int viol[BLOCKSIZE];
+
+	viol[tid] = 0;
+
+	__shared__ int best_c[BLOCKSIZE];
+	__shared__ int best_n[BLOCKSIZE];
+
+	int X = blockIdx.x;
+	int Y = blockIdx.y;
+	int n = gridDim.x;
+
+	int Xv = X + d_V[tid];
+	int Yw = Y + d_W[tid];
+
+	//printf("Tid: %d %d %d - Bid: %d %d %d - Bdim: %d %d %d - Gdim: %d %d %d - Pid: %d \n",
+	//	threadIdx.x, threadIdx.y, threadIdx.z,
+	//	blockIdx.x, blockIdx.y, blockIdx.z,
+	//	blockDim.x, blockDim.y, blockDim.z,
+	//	gridDim.x, gridDim.y, gridDim.z,
+	//	blockDim.x * threadIdx.y + tid);
+
+	if (Xv >= 0 && Xv < n && Yw >= 0 && Yw < n) {
+		int p = d_Pvw[tid];
+		int idx2 = n * n + (Xv)*n + (Yw);
+		viol[tid] = p - d_PI[X * n + Y] + d_PI[idx2];
+		best_c[tid] = p;
+		best_n[tid] = idx2;
+	}
+
+	unsigned int tid2 = blockDim.x * 1 + tid;
+	if (tid2 < Nv) {
+		int Xv2 = X + d_V[tid2];
+		int Yw2 = Y + d_W[tid2];
+
+		if (Xv2 >= 0 && Xv2 < n && Yw2 >= 0 && Yw2 < n) {
+			int p2 = d_Pvw[tid2];
+			int idx3 = n * n + (Xv2)*n + (Yw2);
+			int viol2 = p2 - d_PI[X * n + Y] + d_PI[idx3];
+			if (viol2 < viol[tid]) {
+				viol[tid] = viol2;
+				best_c[tid] = p2;
+				best_n[tid] = idx3;
+			}
+		}
+	}
+
+	// synchronize within block
+	__syncthreads();
+
+	// in-place reduction in global memory
+	//for (int stride = 1; stride < blockDim.x; stride *= 2) {
+	//	//if ((tid % (2 * stride)) == 0) {
+	//	//	if (viol[tid] > viol[tid + stride]) {
+	//	//		viol[tid] = viol[tid + stride];
+	//	//		best_c[tid] = best_c[tid + stride];
+	//	//		best_n[tid] = best_n[tid + stride];
+	//	//	}
+	//	//}
+
+	//	int index = 2 * stride * tid;
+
+	//	if (index < blockDim.x && viol[index] > viol[index + stride]) {
+	//		viol[index] = viol[index + stride];
+	//		best_c[index] = best_c[index + stride];
+	//		best_n[index] = best_n[index + stride];
+	//	}
+
+	//	// synchronize within block
+	//	__syncthreads();
+	//}
+
+	// in-place reduction in global memory
+	for (int stride = blockDim.x / 2; stride > 32; stride >>= 1)
+	{
+		if (tid < stride && viol[tid] > viol[tid + stride]) {
+			viol[tid] = viol[tid + stride];
+			best_c[tid] = best_c[tid + stride];
+			best_n[tid] = best_n[tid + stride];
+		}
+
+		__syncthreads();
+	}
+
+	// unrolling warp
+	if (tid < 32)
+	{
+		volatile int* vme1 = viol;
+		volatile int* vme2 = best_c;
+		volatile int* vme3 = best_n;
+		if (vme1[tid] > vme1[tid + 32]) {
+			vme1[tid] = vme1[tid + 32];
+			vme2[tid] = vme2[tid + 32];
+			vme3[tid] = vme3[tid + 32];
+		}
+		if (vme1[tid] > vme1[tid + 16]) {
+			vme1[tid] = vme1[tid + 16];
+			vme2[tid] = vme2[tid + 16];
+			vme3[tid] = vme3[tid + 16];
+		}
+		if (vme1[tid] > vme1[tid + 8]) {
+			vme1[tid] = vme1[tid + 8];
+			vme2[tid] = vme2[tid + 8];
+			vme3[tid] = vme3[tid + 8];
+		}
+		if (vme1[tid] > vme1[tid + 4]) {
+			vme1[tid] = vme1[tid + 4];
+			vme2[tid] = vme2[tid + 4];
+			vme3[tid] = vme3[tid + 4];
+		}
+		if (vme1[tid] > vme1[tid + 2]) {
+			vme1[tid] = vme1[tid + 2];
+			vme2[tid] = vme2[tid + 2];
+			vme3[tid] = vme3[tid + 2];
+		}
+		if (vme1[tid] > vme1[tid + 1]) {
+			vme1[tid] = vme1[tid + 1];
+			vme2[tid] = vme2[tid + 1];
+			vme3[tid] = vme3[tid + 1];
+		}
+		// write result for this block to global mem
+		if (tid == 0) {
+			int idx = X * n + Y;
+			d_VarC[idx] = -1;
+			if (viol[tid] < 0) {
+				d_VarB[idx] = best_n[tid];
+				d_VarC[idx] = best_c[tid];
+			}
+		}
+	}
+}
+
+__global__ void naivePricingUnroll(
+	int Nv, int* d_V, int* d_W, int* d_Pvw,
+	int* d_PI, int* d_VarB, int* d_VarC)
+{
+
+	// set thread ID
+	__shared__ int viol[BLOCKSIZE];
+	__shared__ int best_c[BLOCKSIZE];
+	__shared__ int best_n[BLOCKSIZE];
+
+	int X = blockIdx.x;
+	int Y = blockIdx.y;
+	int n = gridDim.x;
+
+	//printf("Tid: %d %d %d - Bid: %d %d %d - Bdim: %d %d %d - Gdim: %d %d %d - Pid: %d \n",
+	//	threadIdx.x, threadIdx.y, threadIdx.z,
+	//	blockIdx.x, blockIdx.y, blockIdx.z,
+	//	blockDim.x, blockDim.y, blockDim.z,
+	//	gridDim.x, gridDim.y, gridDim.z,
+	//	blockDim.x * threadIdx.y + tid);
+
+	unsigned int tid = threadIdx.x;
+	unsigned int tid2 = blockDim.x * 1 + tid;
+	unsigned int tid3 = blockDim.x * 2 + tid;
+	unsigned int tid4 = blockDim.x * 3 + tid;
+	unsigned int tid5 = blockDim.x * 4 + tid;
+	unsigned int tid6 = blockDim.x * 5 + tid;
+	unsigned int tid7 = blockDim.x * 6 + tid;
+	unsigned int tid8 = blockDim.x * 7 + tid;
+
+	int Xv = X + d_V[tid];
+	int Yw = Y + d_W[tid];
+
+	int Xv2 = X + d_V[tid2];
+	int Yw2 = Y + d_W[tid2];
+
+	int Xv3 = X + d_V[tid3];
+	int Yw3 = Y + d_W[tid3];
+
+	int Xv4 = X + d_V[tid4];
+	int Yw4 = Y + d_W[tid4];
+
+	int Xv5 = X + d_V[tid5];
+	int Yw5 = Y + d_W[tid5];
+
+	int Xv6 = X + d_V[tid6];
+	int Yw6 = Y + d_W[tid6];
+
+	int Xv7 = X + d_V[tid7];
+	int Yw7 = Y + d_W[tid7];
+
+	int Xv8 = X + d_V[tid8];
+	int Yw8 = Y + d_W[tid8];
+
+	int NN = n * n;
+	int DI = d_PI[X * n + Y];
+
+	viol[tid] = 0;
+
+	if (Xv >= 0 && Xv < n && Yw >= 0 && Yw < n) {
+		int p = d_Pvw[tid];
+		int idx2 = NN + (Xv)*n + (Yw);
+		viol[tid] = p - DI + d_PI[idx2];
+		best_c[tid] = p;
+		best_n[tid] = idx2;
+	}
+
+	if (Xv2 >= 0 && Xv2 < n && Yw2 >= 0 && Yw2 < n) {
+		int p2 = d_Pvw[tid2];
+		int idx3 = NN + (Xv2)*n + (Yw2);
+		int viol2 = p2 - DI + d_PI[idx3];
+		if (viol2 < viol[tid]) {
+			viol[tid] = viol2;
+			best_c[tid] = p2;
+			best_n[tid] = idx3;
+		}
+	}
+
+	if (Xv3 >= 0 && Xv3 < n && Yw3 >= 0 && Yw3 < n) {
+		int p3 = d_Pvw[tid3];
+		int idx4 = NN + (Xv3)*n + (Yw3);
+		int viol3 = p3 - DI + d_PI[idx4];
+		if (viol3 < viol[tid]) {
+			viol[tid] = viol3;
+			best_c[tid] = p3;
+			best_n[tid] = idx4;
+		}
+	}
+
+	if (Xv4 >= 0 && Xv4 < n && Yw4 >= 0 && Yw4 < n) {
+		int p4 = d_Pvw[tid4];
+		int idx5 = NN + (Xv4)*n + (Yw4);
+		int viol4 = p4 - DI + d_PI[idx5];
+		if (viol4 < viol[tid]) {
+			viol[tid] = viol4;
+			best_c[tid] = p4;
+			best_n[tid] = idx5;
+		}
+	}
+
+	if (Xv5 >= 0 && Xv5 < n && Yw5 >= 0 && Yw5 < n) {
+		int p = d_Pvw[tid5];
+		int idx0 = NN + (Xv5)*n + (Yw5);
+		int viol5 = p - DI + d_PI[idx0];
+		if (viol5 < viol[tid]) {
+			viol[tid] = viol5;
+			best_c[tid] = p;
+			best_n[tid] = idx0;
+		}
+	}
+
+	if (Xv6 >= 0 && Xv6 < n && Yw6 >= 0 && Yw6 < n) {
+		int p = d_Pvw[tid6];
+		int idx0 = NN + (Xv6)*n + (Yw6);
+		int viol6 = p - DI + d_PI[idx0];
+		if (viol6 < viol[tid]) {
+			viol[tid] = viol6;
+			best_c[tid] = p;
+			best_n[tid] = idx0;
+		}
+	}
+
+	if (Xv7 >= 0 && Xv7 < n && Yw7 >= 0 && Yw7 < n) {
+		int p = d_Pvw[tid7];
+		int idx0 = NN + (Xv7)*n + (Yw7);
+		int viol7 = p - DI + d_PI[idx0];
+		if (viol7 < viol[tid]) {
+			viol[tid] = viol7;
+			best_c[tid] = p;
+			best_n[tid] = idx0;
+		}
+	}
+
+	if (Xv8 >= 0 && Xv8 < n && Yw8 >= 0 && Yw8 < n) {
+		int p = d_Pvw[tid8];
+		int idx0 = NN + (Xv8)*n + (Yw8);
+		int viol8 = p - DI + d_PI[idx0];
+		if (viol8 < viol[tid]) {
+			viol[tid] = viol8;
+			best_c[tid] = p;
+			best_n[tid] = idx0;
+		}
+	}
+
+	__syncthreads();
+
+	// in-place reduction in global memory
+	for (int stride = blockDim.x / 2; stride > 32; stride >>= 1)
+	{
+		if (tid < stride && viol[tid] > viol[tid + stride]) {
+			viol[tid] = viol[tid + stride];
+			best_c[tid] = best_c[tid + stride];
+			best_n[tid] = best_n[tid + stride];
+		}
+
+		__syncthreads();
+	}
+
+	// unrolling warp
+	if (tid < 32)
+	{
+		volatile int* vme1 = viol;
+		volatile int* vme2 = best_c;
+		volatile int* vme3 = best_n;
+		if (vme1[tid] > vme1[tid + 32]) {
+			vme1[tid] = vme1[tid + 32];
+			vme2[tid] = vme2[tid + 32];
+			vme3[tid] = vme3[tid + 32];
+		}
+		if (vme1[tid] > vme1[tid + 16]) {
+			vme1[tid] = vme1[tid + 16];
+			vme2[tid] = vme2[tid + 16];
+			vme3[tid] = vme3[tid + 16];
+		}
+		if (vme1[tid] > vme1[tid + 8]) {
+			vme1[tid] = vme1[tid + 8];
+			vme2[tid] = vme2[tid + 8];
+			vme3[tid] = vme3[tid + 8];
+		}
+		if (vme1[tid] > vme1[tid + 4]) {
+			vme1[tid] = vme1[tid + 4];
+			vme2[tid] = vme2[tid + 4];
+			vme3[tid] = vme3[tid + 4];
+		}
+		if (vme1[tid] > vme1[tid + 2]) {
+			vme1[tid] = vme1[tid + 2];
+			vme2[tid] = vme2[tid + 2];
+			vme3[tid] = vme3[tid + 2];
+		}
+		if (vme1[tid] > vme1[tid + 1]) {
+			vme1[tid] = vme1[tid + 1];
+			vme2[tid] = vme2[tid + 1];
+			vme3[tid] = vme3[tid + 1];
+		}
+		// write result for this block to global mem
+		if (tid == 0) {
+			int idx = X * n + Y;
+			d_VarC[idx] = -1;
+			if (viol[tid] < 0) {
+				d_VarB[idx] = best_n[tid];
+				d_VarC[idx] = best_c[tid];
+			}
+		}
+	}
+}
 
 namespace DOT {
 
@@ -133,12 +622,12 @@ namespace DOT {
 		//----------------------------------------------------------------------------------------
 		// Compute Kantorovich-Wasserstein distance between two measures
 		double bipartite(const Histogram2D& A, const Histogram2D& B) {
-			size_t n = A.getN();
+			int n = A.getN();
 
 			// Compute distances
 			std::set<int> tauset;
-			for (size_t v = 0; v < n; ++v)
-				for (size_t w = 0; w < n; ++w)
+			for (int v = 0; v < n; ++v)
+				for (int w = 0; w < n; ++w)
 					tauset.insert(pow(v, 2) + pow(w, 2));
 
 			vector<int> tau;
@@ -325,7 +814,7 @@ namespace DOT {
 
 			while (_status != ProblemType::TIMELIMIT) {
 				// Take the dual values
-				for (size_t j = 0; j < N; ++j)
+				for (int j = 0; j < N; ++j)
 					pi[j] = -simplex.potential(j);
 
 				// Solve separation problem:
@@ -410,12 +899,12 @@ namespace DOT {
 
 		// Compute Kantorovich-Wasserstein distance between two measures
 		double phaseTwo(const Histogram2D& A, const Histogram2D& B) {
-			size_t n = A.getN();
+			int n = A.getN();
 
 			// Compute distances
 			std::set<int> tauset;
-			for (size_t v = 0; v < n; ++v)
-				for (size_t w = 0; w < n; ++w)
+			for (int v = 0; v < n; ++v)
+				for (int w = 0; w < n; ++w)
 					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
 
 			vector<int> tau;
@@ -425,7 +914,7 @@ namespace DOT {
 
 			fprintf(stdout, "distances: %d %d\n", tau.size(), tau[0]);
 
-			size_t idxL = 0;
+			int idxL = 0;
 			init_dist_from_to(tau, 0, idxL);
 
 			// Build the graph for min cost flow
@@ -441,16 +930,16 @@ namespace DOT {
 				simplex.setOptTolerance(opt_tolerance);
 
 				// add first d source nodes
-				for (size_t i = 0; i < n; ++i)
-					for (size_t j = 0; j < n; ++j)
+				for (int i = 0; i < n; ++i)
+					for (int j = 0; j < n; ++j)
 						simplex.addNode(ID(i, j), A.get(i, j));
 
-				for (size_t i = 0; i < n; ++i)
-					for (size_t j = 0; j < n; ++j)
+				for (int i = 0; i < n; ++i)
+					for (int j = 0; j < n; ++j)
 						simplex.addNode(n * n + ID(i, j), -B.get(i, j));
 
-				for (size_t i = 0; i < n; ++i)
-					for (size_t j = 0; j < n; ++j) {
+				for (int i = 0; i < n; ++i)
+					for (int j = 0; j < n; ++j) {
 						for (const auto& p : coprimes) {
 							int v = p.v;
 							int w = p.w;
@@ -461,7 +950,6 @@ namespace DOT {
 					}
 
 				int it = 0;
-				int n_cuts = 0;
 				int64_t fobj = 0;
 
 				// Init the simplex
@@ -487,8 +975,8 @@ namespace DOT {
 					init_coprimes(tau[idxL]);
 					idxL++;
 
-					for (size_t i = 0; i < n; ++i)
-						for (size_t j = 0; j < n; ++j) {
+					for (int i = 0; i < n; ++i)
+						for (int j = 0; j < n; ++j) {
 							for (const auto& p : coprimes) {
 								int v = p.v;
 								int w = p.w;
@@ -569,12 +1057,12 @@ namespace DOT {
 			// Arcs to be updated
 			vector<size_t> dummy_arcs;
 			dummy_arcs.reserve(n * n);
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
 					dummy_arcs.push_back(simplexTwo.addArc(ID(i, j), 2 * n * n, tau[idxL]));
 
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
 					simplexTwo.addArc(2 * n * n, ID(i, j), 0);
 
 			simplexTwo.recomputePotential();
@@ -600,8 +1088,8 @@ namespace DOT {
 				init_coprimes(tau[idxL]);
 				idxL++;
 
-				for (size_t i = 0; i < n; ++i)
-					for (size_t j = 0; j < n; ++j) {
+				for (int i = 0; i < n; ++i)
+					for (int j = 0; j < n; ++j) {
 						for (const auto& p : coprimes) {
 							int v = p.v;
 							int w = p.w;
@@ -639,12 +1127,12 @@ namespace DOT {
 
 		// Compute Kantorovich-Wasserstein distance between two measures
 		double phaseOne(const Histogram2D& A, const Histogram2D& B) {
-			size_t n = A.getN();
+			int n = A.getN();
 
 			// Compute distances
 			std::set<int> tauset;
-			for (size_t v = 0; v < n; ++v)
-				for (size_t w = 0; w < n; ++w)
+			for (int v = 0; v < n; ++v)
+				for (int w = 0; w < n; ++w)
 					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
 
 			vector<int> tau;
@@ -661,8 +1149,8 @@ namespace DOT {
 			vector<int> pi(N, 0);
 
 			Vars vars(N);
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
 					vars[ID(i, j)].a = ID(i, j);
 
 			Vars vnew;
@@ -684,16 +1172,16 @@ namespace DOT {
 			simplex.setOptTolerance(opt_tolerance);
 
 			// add first d source nodes
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
 					simplex.addNode(ID(i, j), A.get(i, j));
 
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
 					simplex.addNode(n * n + ID(i, j), -B.get(i, j));
 
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j) {
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j) {
 					for (const auto& p : coprimes) {
 						int v = p.v;
 						int w = p.w;
@@ -722,8 +1210,8 @@ namespace DOT {
 				idxUP = std::min(idxUP + TT, (int)tau.size());
 				init_dist_from_to(tau, idxLO, idxUP);
 
-				for (size_t i = 0; i < n; ++i)
-					for (size_t j = 0; j < n; ++j) {
+				for (int i = 0; i < n; ++i)
+					for (int j = 0; j < n; ++j) {
 						for (const auto& p : coprimes) {
 							int v = p.v;
 							int w = p.w;
@@ -755,9 +1243,9 @@ namespace DOT {
 			return fobj;
 		}
 
-		double colgen(const Histogram2D& A, const Histogram2D& B, int idxL,
+		double colgenOld(const Histogram2D& A, const Histogram2D& B, int idxL,
 			const std::string& msg) {
-			size_t n = A.getN();
+			int n = A.getN();
 
 			// Compute distances
 			std::set<int> tauset;
@@ -777,6 +1265,8 @@ namespace DOT {
 			init_dist_from_to(tau, 0, TT);
 
 			fprintf(stdout, "coprimes size: %d\n", coprimes.size());
+
+			//coprimes.resize(128);
 
 			auto ID = [&n](int x, int y) { return x * n + y; };
 
@@ -826,7 +1316,7 @@ namespace DOT {
 
 			while (_status != ProblemType::TIMELIMIT) {
 				// Take the dual values
-				for (size_t j = 0; j < N; ++j)
+				for (int j = 0; j < N; ++j)
 					pi[j] = -simplex.potential(j);
 
 				// Solve separation problem:
@@ -837,7 +1327,10 @@ namespace DOT {
 						int best_c = -1;
 						int best_n = 0; // best second node
 						int h = ID(i, j);
-						for (const auto& p : coprimes) {
+						//for (const auto& p : coprimes) 
+						for (int PP = 0; PP < std::min<int>(coprimes.size(), BLOCKSIZE * BLOCKNUM); PP++)
+						{
+							const auto& p = coprimes[PP];
 							int v = p.v;
 							int w = p.w;
 							if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
@@ -858,10 +1351,13 @@ namespace DOT {
 				// Take all negative reduced cost variables
 				vnew.clear();
 				for (auto& v : vars) {
+					fprintf(stdout, "%d %d\t", v.b, v.c);
 					if (v.c > -1)
 						vnew.push_back(v);
 					v.c = -1;
 				}
+				fprintf(stdout, "\n");
+				fflush(stdout);
 
 				if (vnew.empty())
 					break;
@@ -889,7 +1385,7 @@ namespace DOT {
 			double fobj = double(simplex.totalCost()) / A.balance();
 
 			// Upper bound on the missed mass
-			auto unmoved = 0;// double(simplex.computeDummyFlow(left_arcs)) / A.balance();
+			auto unmoved = 0.0;// double(simplex.computeDummyFlow(left_arcs)) / A.balance();
 			double delta = 0.0;
 
 			vector<double> Aflow(n * n, 0.0);
@@ -923,21 +1419,336 @@ namespace DOT {
 			// delta = findUB(AA, BB) / A.balance();
 
 			PRINT("COLGEN %s it %lld LB %.6f UB %.6f runtime %.4f simplex %.4f "
-				"num_arcs %ld idx %d tau %d maxtau %d residual %.6f\n",
+				"num_arcs %lld idx %d tau %d maxtau %d residual %.6f\n",
 				msg.c_str(), _iterations, fobj, delta, _all, _runtime, _num_arcs, TT,
 				tau[TT], tau[tau.size() - 1], unmoved);
 
 			return fobj;
 		}
 
-		double nearbyUB(const Histogram2D& A, const Histogram2D& B, int idxL,
+		double colgen(const Histogram2D& A, const Histogram2D& B, int idxL,
 			const std::string& msg) {
-			size_t n = A.getN();
+			int n = A.getN();
 
 			// Compute distances
 			std::set<int> tauset;
-			for (size_t v = 0; v < n; ++v)
-				for (size_t w = 0; w < n; ++w)
+			for (int v = 0; v < n; ++v)
+				for (int w = 0; w < n; ++w)
+					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
+
+			vector<int> tau;
+			for (auto v : tauset)
+				tau.push_back(v);
+			fprintf(stdout, "distances: %lld\n", tau.size());
+
+			int TT = std::min<int>(1024, static_cast<int>(tau.size() - 1));
+			init_dist_from_to(tau, 0, TT, true);
+
+			fprintf(stdout, "coprimes size: %lld\n", coprimes.size());
+
+			auto ID = [&n](int x, int y) { return x * n + y; };
+
+			int N = 2 * n * n;
+			vector<int> pi(N, 0);
+
+			Vars vars(n * n);
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
+					vars[ID(i, j)].a = ID(i, j);
+
+			Vars vnew;
+			vnew.reserve(n * n);
+
+			// Build the graph for min cost flow
+			NetSimplex simplex('E', N, 0);
+
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
+					simplex.addNode(ID(i, j), A.get(i, j));
+
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
+					simplex.addNode(n * n + ID(i, j), -B.get(i, j));
+
+			// Set the parameters
+			simplex.setTimelimit(timelimit);
+			simplex.setVerbosity(verbosity);
+			simplex.setOptTolerance(opt_tolerance);
+
+			_status = simplex.run();
+
+			auto start_t = std::chrono::steady_clock::now();
+
+
+			while (_status != ProblemType::TIMELIMIT) {
+				// Take the dual values
+				for (int j = 0; j < N; ++j)
+					pi[j] = -simplex.potential(j);
+
+				// Solve separation problem:
+#pragma omp parallel for collapse(2)
+				for (int i = 0; i < n; ++i)
+					for (int j = 0; j < n; ++j) {
+						int best_v = 0;
+						int best_c = -1;
+						int best_n = 0; // best second node
+						int h = ID(i, j);
+						//for (const auto& p : coprimes) 
+						for (int PP = 0; PP < std::min<int>(coprimes.size(), BLOCKNUM * BLOCKSIZE); PP++)
+						{
+							const auto& p = coprimes[PP];
+							int v = p.v;
+							int w = p.w;
+							if (i + v >= 0 && i + v < n && j + w >= 0 && j + w < n) {
+								int violation = p.c_vw - pi[h] + pi[n * n + ID(i + v, j + w)];
+								if (violation < best_v) {
+									best_v = violation;
+									best_c = p.c_vw;
+									best_n = n * n + ID(i + v, j + w);
+								}
+							}
+						}
+
+						// Store most violated cuts for element i
+						vars[h].b = best_n;
+						vars[h].c = best_c;
+					}
+
+				// Take all negative reduced cost variables
+				vnew.clear();
+				for (auto& v : vars) {
+					if (v.c > -1)
+						vnew.push_back(v);
+					v.c = -1;
+				}
+
+				if (vnew.empty())
+					break;
+
+				std::sort(vnew.begin(), vnew.end(),
+					[](const Var& v, const Var& w) { return v.c > w.c; });
+
+				// Replace old constraints with new ones
+				int new_arcs = simplex.updateArcs(vnew);
+
+				_status = simplex.reRun();
+			}
+
+			_runtime = simplex.runtime();
+			_iterations = simplex.iterations();
+			_num_arcs = simplex.num_arcs();
+			_num_nodes = simplex.num_nodes();
+
+			auto end_t = std::chrono::steady_clock::now();
+			auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+				end_t - start_t)
+				.count()) /
+				1000;
+
+			double fobj = double(simplex.totalCost()) / A.balance();
+
+			// Upper bound on the missed mass
+			PRINT("COLGEN %s it %lld LB %.6f runtime %.4f simplex %.4f "
+				"num_arcs %lld idx %d tau %d maxtau %d\n",
+				msg.c_str(), _iterations, fobj, _all, _runtime, _num_arcs, TT,
+				tau[TT], tau[tau.size() - 1]);
+
+			return fobj;
+		}
+
+		//------------------------------------------------------------------------------------------
+		double colgenCuda(const Histogram2D& A, const Histogram2D& B, int idxL,
+			const std::string& msg) {
+			int n = A.getN();
+
+			// Compute distances
+			std::set<int> tauset;
+			for (int v = 0; v < n; ++v)
+				for (int w = 0; w < n; ++w)
+					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
+
+			vector<int> tau;
+			for (auto v : tauset)
+				tau.push_back(v);
+			fprintf(stdout, "distances: %lld\n", tau.size());
+
+			int TT = std::min<int>(1024, static_cast<int>(tau.size() - 1));
+			init_dist_from_to(tau, 0, TT, true);
+
+			fprintf(stdout, "coprimes size: %lld\n", coprimes.size());
+
+			int* h_V = (int*)malloc(BLOCKNUM * BLOCKSIZE * sizeof(int));
+			int* h_W = (int*)malloc(BLOCKNUM * BLOCKSIZE * sizeof(int));
+			int* h_Pvw = (int*)malloc(BLOCKNUM * BLOCKSIZE * sizeof(int));
+
+			for (int hh = 0; hh < BLOCKNUM * BLOCKSIZE; hh++)
+				if (hh < static_cast<int>(coprimes.size())) {
+					auto cc = coprimes[hh];
+					h_V[hh] = cc.v;
+					h_W[hh] = cc.w;
+					h_Pvw[hh] = cc.c_vw;
+				}
+				else {
+					h_V[hh] = 2 * n;
+					h_W[hh] = 2 * n;
+					h_Pvw[hh] = INT_MAX;
+				}
+
+
+			auto ID = [&n](int x, int y) { return x * n + y; };
+
+			int N = 2 * n * n;
+			vector<int> pi(N, 0);
+
+			Vars vars(n * n);
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
+					vars[ID(i, j)].a = ID(i, j);
+
+			Vars vnew;
+			vnew.reserve(n * n);
+
+			int* h_VarB = (int*)malloc(n * n * sizeof(int));
+			int* h_VarC = (int*)malloc(n * n * sizeof(int));
+			memset(h_VarB, -1, n * n * sizeof(int));
+			memset(h_VarC, -1, n * n * sizeof(int));
+
+
+			// Build the graph for min cost flow
+			NetSimplex simplex('E', N, 0);
+
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
+					simplex.addNode(ID(i, j), A.get(i, j));
+
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
+					simplex.addNode(n * n + ID(i, j), -B.get(i, j));
+
+			// Set the parameters
+			simplex.setTimelimit(timelimit);
+			simplex.setVerbosity(verbosity);
+			simplex.setOptTolerance(opt_tolerance);
+
+			// Data for CUDA support 
+			// set up device
+			int dev = 0;
+			cudaDeviceProp deviceProp;
+			cudaGetDeviceProperties(&deviceProp, dev);
+			printf("device %d: %s ", dev, deviceProp.name);
+			cudaSetDevice(dev);
+
+			int* d_V;
+			int* d_W;
+			int* d_Pvw;
+			size_t Nv = BLOCKNUM * BLOCKSIZE * sizeof(int);
+			cudaMalloc((void**)&d_V, Nv);
+			cudaMalloc((void**)&d_W, Nv);
+			cudaMalloc((void**)&d_Pvw, Nv);
+			// Copy once for all
+			CHECK(cudaMemcpy(d_V, h_V, Nv, cudaMemcpyHostToDevice));
+			CHECK(cudaMemcpy(d_W, h_W, Nv, cudaMemcpyHostToDevice));
+			CHECK(cudaMemcpy(d_Pvw, h_Pvw, Nv, cudaMemcpyHostToDevice));
+
+			/*for (size_t hh = 0; hh < BLOCKNUM * BLOCKSIZE; hh++) {
+				fprintf(stdout, "%d %d %d\n", h_V[hh], h_W[hh], h_Pvw[hh]);
+			}
+			return 0;*/
+
+			//fprintf(stdout, "First step\n");
+			//fflush(stdout);
+
+			int* d_PI;
+			int* d_VarB;
+			int* d_VarC;
+			size_t Npi = 2 * n * n * sizeof(int);
+			size_t Nvar = n * n * sizeof(int);
+			CHECK(cudaMalloc((void**)&d_PI, Npi));
+			CHECK(cudaMalloc((void**)&d_VarB, Nvar));
+			CHECK(cudaMalloc((void**)&d_VarC, Nvar));
+
+			const dim3 blockSize(BLOCKSIZE, 1);
+			const dim3 gridSize(n, n, 1);
+
+			int Z0 = std::min<int>(BLOCKSIZE * BLOCKNUM, static_cast<int>(coprimes.size()));
+
+			_status = simplex.run();
+
+			auto start_t = std::chrono::steady_clock::now();
+
+			while (_status != ProblemType::TIMELIMIT) {
+				// Take the dual values
+				for (int j = 0; j < N; ++j)
+					pi[j] = -simplex.potential(j);
+
+				CHECK(cudaMemcpy(d_PI, &pi[0], Npi, cudaMemcpyHostToDevice));
+
+				naivePricingUnroll << <gridSize, blockSize >> > (Z0, d_V, d_W, d_Pvw, d_PI, d_VarB, d_VarC);
+
+				CHECK(cudaMemcpy(h_VarB, d_VarB, Nvar, cudaMemcpyDeviceToHost));
+				CHECK(cudaMemcpy(h_VarC, d_VarC, Nvar, cudaMemcpyDeviceToHost));
+
+				// Take all negative reduced cost variables
+				vnew.clear();
+				for (int h = 0, h_max = n * n; h < h_max; ++h)
+					if (h_VarC[h] > -1)
+						vnew.emplace_back(vars[h].a, h_VarB[h], h_VarC[h]);
+
+				if (vnew.empty())
+					break;
+
+				std::sort(vnew.begin(), vnew.end(),
+					[](const Var& v, const Var& w) { return v.c > w.c; });
+
+				// Replace old constraints with new ones
+				int new_arcs = simplex.updateArcs(vnew);
+
+				_status = simplex.reRun();
+			}
+
+			_runtime = simplex.runtime();
+			_iterations = simplex.iterations();
+			_num_arcs = simplex.num_arcs();
+			_num_nodes = simplex.num_nodes();
+
+			auto end_t = std::chrono::steady_clock::now();
+			auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+				end_t - start_t)
+				.count()) /
+				1000;
+
+			double fobj = double(simplex.totalCost()) / A.balance();
+
+
+			// Upper bound on the missed mass
+			auto unmoved = 0.0;// double(simplex.computeDummyFlow(left_arcs)) / A.balance();
+			double delta = 0.0;
+
+			PRINT("COCUDA %s it %lld LB %.6f UB %.6f runtime %.4f simplex %.4f "
+				"num_arcs %ld idx %d tau %d maxtau %d residual %.6f\n",
+				msg.c_str(), _iterations, fobj, delta, _all, _runtime, _num_arcs, TT,
+				tau[TT], tau[tau.size() - 1], unmoved);
+
+			// free device memory
+			cudaFree(d_V);
+			cudaFree(d_W);
+			cudaFree(d_Pvw);
+			cudaFree(d_PI);
+			cudaFree(d_VarB);
+			cudaFree(d_VarC);
+			cudaDeviceReset();
+
+			return fobj;
+		}
+
+		double nearbyUB(const Histogram2D& A, const Histogram2D& B, int idxL,
+			const std::string& msg) {
+			int n = A.getN();
+
+			// Compute distances
+			std::set<int> tauset;
+			for (int v = 0; v < n; ++v)
+				for (int w = 0; w < n; ++w)
 					tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
 
 			vector<int> tau;
@@ -954,8 +1765,8 @@ namespace DOT {
 			vector<int> pi(N, 0);
 
 			Vars vars(N);
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
 					vars[ID(i, j)].a = ID(i, j);
 
 			Vars vnew;
@@ -966,12 +1777,12 @@ namespace DOT {
 			// Build the graph for min cost flow
 			NetSimplex simplex('E', N, 0);
 
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
 					simplex.addNode(ID(i, j), A.get(i, j));
 
-			for (size_t i = 0; i < n; ++i)
-				for (size_t j = 0; j < n; ++j)
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < n; ++j)
 					simplex.addNode(n * n + ID(i, j), -B.get(i, j));
 
 			// Set the parameters
@@ -983,7 +1794,7 @@ namespace DOT {
 
 			while (_status != ProblemType::TIMELIMIT) {
 				// Take the dual values
-				for (size_t j = 0; j < N; ++j)
+				for (int j = 0; j < N; ++j)
 					pi[j] = -simplex.potential(j);
 
 				// Solve separation problem:
@@ -1050,9 +1861,6 @@ namespace DOT {
 			// double(simplex.computeDummyFlow(left_arcs)) / A.balance();
 			double delta = 0.0;
 
-			vector<double> Aflow(n * n, 0.0);
-			vector<double> Bflow(n * n, 0.0);
-
 			PRINT("COLEGN %s it %lld LB %.6f UB %.6f runtime %.4f simplex %.4f "
 				"num_arcs %ld idx %d tau %d maxtau %d residual %.6f\n",
 				msg.c_str(), _iterations, fobj, delta, _all, _runtime, _num_arcs, TT,
@@ -1063,13 +1871,13 @@ namespace DOT {
 
 #ifdef __MY_LEMON__
 		double Winf(const Histogram2D& A, const Histogram2D& B) {
-			size_t s = A.getN();
-			size_t d = s * s;
+			int s = A.getN();
+			int d = s * s;
 
 			// Compute distances
 			std::set<int> tauset;
-			for (size_t v = 0; v < s; ++v)
-				for (size_t w = 0; w < s; ++w)
+			for (int v = 0; v < s; ++v)
+				for (int w = 0; w < s; ++w)
 					tauset.insert(pow(v, 2) + pow(w, 2));
 
 			vector<int> tau;
@@ -1078,7 +1886,7 @@ namespace DOT {
 
 			auto start_t = std::chrono::steady_clock::now();
 
-			size_t idxL = tau.size() / 10;
+			int idxL = tau.size() / 10;
 			init_dist_from_to(tau, tau[0], tau[idxL]);
 			idxL++;
 
@@ -1086,17 +1894,17 @@ namespace DOT {
 
 			LemonGraph g;
 
-			auto ID = [&s](size_t x, size_t y) { return x * s + y; };
+			auto ID = [&s](int x, int y) { return x * s + y; };
 
 			// add d nodes for each histrogam (d+1) source, (d+2) target
 			std::vector<LemonGraph::Node> nodes;
 			// add first d source nodes
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j)
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j)
 					nodes.emplace_back(g.addNode());
 
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j)
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j)
 					nodes.emplace_back(g.addNode());
 
 			// Sink node
@@ -1109,8 +1917,8 @@ namespace DOT {
 			std::vector<LemonGraph::Arc> arcs;
 			std::vector<int> a_cap;
 
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j) {
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j) {
 					for (const auto& p : coprimes) {
 						int v = p.v;
 						int w = p.w;
@@ -1122,14 +1930,14 @@ namespace DOT {
 					}
 				}
 
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j) {
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j) {
 					arcs.emplace_back(g.addArc(S, nodes[ID(i, j)]));
 					a_cap.emplace_back(A.get(i, j));
 				}
 
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j) {
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j) {
 					arcs.emplace_back(g.addArc(nodes[s * s + ID(i, j)], T));
 					a_cap.emplace_back(B.get(i, j));
 				}
@@ -1137,7 +1945,7 @@ namespace DOT {
 			fprintf(stdout, "Input graph created with %d nodes and %d arcs\n",
 				countNodes(g), countArcs(g));
 			ListDigraph::ArcMap<int> u_i(g);
-			for (size_t i = 0, i_max = arcs.size(); i < i_max; ++i) {
+			for (int i = 0, i_max = arcs.size(); i < i_max; ++i) {
 				const auto& a = arcs[i];
 				u_i[a] = a_cap[i];
 			}
@@ -1157,13 +1965,13 @@ namespace DOT {
 
 		// Compute Kantorovich-Wasserstein distance between two measures
 		double lemon(const Histogram2D& A, const Histogram2D& B) {
-			size_t s = A.getN();
-			size_t d = s * s;
+			int s = A.getN();
+			int d = s * s;
 
 			// Compute distances
 			std::set<int> tauset;
-			for (size_t v = 0; v < s; ++v)
-				for (size_t w = 0; w < s; ++w)
+			for (int v = 0; v < s; ++v)
+				for (int w = 0; w < s; ++w)
 					tauset.insert(pow(v, 2) + pow(w, 2));
 
 			vector<int> tau;
@@ -1172,7 +1980,7 @@ namespace DOT {
 
 			auto start_t = std::chrono::steady_clock::now();
 
-			size_t idxL = 3;
+			int idxL = 3;
 			init_dist_upto(tau[idxL]);
 			idxL++;
 
@@ -1180,17 +1988,17 @@ namespace DOT {
 
 			LemonGraph g;
 
-			auto ID = [&s](size_t x, size_t y) { return x * s + y; };
+			auto ID = [&s](int x, int y) { return x * s + y; };
 
 			// add d nodes for each histrogam (d+1) source, (d+2) target
 			std::vector<LemonGraph::Node> nodes;
 			// add first d source nodes
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j)
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j)
 					nodes.emplace_back(g.addNode());
 
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j)
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j)
 					nodes.emplace_back(g.addNode());
 
 			// Sink node
@@ -1200,8 +2008,8 @@ namespace DOT {
 			std::vector<int64_t> a_costs;
 			std::vector<int64_t> a_cap;
 
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j) {
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j) {
 					for (const auto& p : coprimes) {
 						int v = p.v;
 						int w = p.w;
@@ -1214,15 +2022,15 @@ namespace DOT {
 					}
 				}
 
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j) {
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j) {
 					arcs.emplace_back(g.addArc(nodes[ID(i, j)], nodes[2 * s * s]));
 					a_costs.emplace_back(0);
 					a_cap.emplace_back(A.get(i, j));
 				}
 
-			for (size_t i = 0; i < s; ++i)
-				for (size_t j = 0; j < s; ++j) {
+			for (int i = 0; i < s; ++i)
+				for (int j = 0; j < s; ++j) {
 					arcs.emplace_back(g.addArc(nodes[2 * s * s], nodes[s * s + ID(i, j)]));
 					a_costs.emplace_back(0);
 					a_cap.emplace_back(B.get(i, j));
@@ -1240,20 +2048,20 @@ namespace DOT {
 			// FLow balance
 			ListDigraph::NodeMap<LimitValueType> b_i(g);
 			{
-				size_t idx = 0;
-				for (size_t i = 0; i < s; ++i)
-					for (size_t j = 0; j < s; ++j)
+				int idx = 0;
+				for (int i = 0; i < s; ++i)
+					for (int j = 0; j < s; ++j)
 						b_i[nodes[idx++]] = LimitValueType(A.get(i, j));
 
-				for (size_t i = 0; i < s; ++i)
-					for (size_t j = 0; j < s; ++j)
+				for (int i = 0; i < s; ++i)
+					for (int j = 0; j < s; ++j)
 						b_i[nodes[idx++]] = LimitValueType(-B.get(i, j));
 
 				b_i[nodes[idx++]] = LimitValueType(0);
 			}
 
 			// Add all edges
-			for (size_t i = 0, i_max = arcs.size(); i < i_max; ++i) {
+			for (int i = 0, i_max = arcs.size(); i < i_max; ++i) {
 				const auto& a = arcs[i];
 				l_i[a] = 0;
 				u_i[a] = a_cap[i];
@@ -1283,7 +2091,7 @@ namespace DOT {
 			}
 
 			double ff = 0;
-			for (size_t tt = arcs.size() - s * s, tt_max = arcs.size(); tt < tt_max;
+			for (int tt = arcs.size() - s * s, tt_max = arcs.size(); tt < tt_max;
 				++tt) {
 				ff += simplex.flow(arcs[tt]);
 				/*if (simplex.flow(arcs[tt]) > 0)*/
@@ -1307,12 +2115,10 @@ namespace DOT {
 			Histogram2D A(_A);
 			Histogram2D B(_B);
 
-			size_t n = A.getN();
+			int n = A.getN();
 
 			// pairs ordered
 			init_all(n, true);
-
-			auto ID = [&n](int x, int y) { return x * n + y; };
 
 			double delta = 0;
 
@@ -1423,6 +2229,6 @@ namespace DOT {
 		// Time limit for runtime of the algorithm
 		double timelimit;
 
-	}; // namespace DOT
+		}; // namespace DOT
 
-} // namespace DOT
+	} // namespace DOT
