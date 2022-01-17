@@ -34,5 +34,8 @@
     <ClInclude Include="..\..\..\include\DOT_EapiSimplex.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_Solver.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
