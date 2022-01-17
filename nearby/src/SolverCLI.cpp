@@ -51,8 +51,8 @@ int main(int argc, char* argv[]) {
 		DOT::Solver solver;
 
 		//solver.tripartiteColgen(a, b);
-		//solver.bipartite(a, b);
-		solver.colgenCuda(a, b, 20, msg);
+		solver.bipartite(a, b, msg);
+		//solver.colgenCuda(a, b, 20, msg);
 	}
 	if (false) {
 		std::string SEP = "\\";
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 
 							// for (int tau : {1,  5,  10, 15, 20, 25, 30, 35, 40, 45,
 							//                50, 55, 60, 65, 70, 75, 80, 85, 95, 100})
-							solver.colgen(a, b, 15, msg);
+							solver.bipartite(a, b, msg);
 						}
 				}
 			}
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
 		PRINT("start solver %d %ld %ld\n", cc, a.balance(), b.balance());
 		DOT::Solver solver;
 
-		double dist = solver.bipartite(a, b);
+		double dist = solver.bipartite(a, b, "bip");
 
 		// TODO: FIX double dist2 = solver.tripartite(a, b);
 	}

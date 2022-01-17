@@ -6,6 +6,9 @@
  *
  */
 
+
+
+
 #include <random>
 
 #include "DOT_Solver.h"
@@ -33,11 +36,11 @@ int main(int argc, char* argv[]) {
 		DOT::Histogram2D a;
 		DOT::Histogram2D b;
 
-		std::string f1 = "data64_1006.csv";
-		std::string f2 = "data64_1007.csv";
+		std::string f1 = "data64_1001.csv";
+		std::string f2 = "data64_1002.csv";
 
-		a.parse(base + "Shapes" + SEP + f1);
-		b.parse(base + "Shapes" + SEP + f2);
+		a.parse(base + "ClassicImages" + SEP + f1);
+		b.parse(base + "ClassicImages" + SEP + f2);
 
 		//a.parse("C:"
 		//	"\\Users\\gualandi\\Documents\\GitHub\\dotlib\\nearby\\msvc\\Neraby"
@@ -66,9 +69,9 @@ int main(int argc, char* argv[]) {
 		solver.init_dist_from_to(tau, 0, TT, true);
 		fprintf(stdout, "coprimes size: %lld\n", solver.coprimes.size());
 
-		//solver.bipartite(a, b);
-		solver.colgenCuda(a, b, 20, msg);
-		//solver.colgen(a, b, 20, msg);
+		solver.bipartite(a, b, msg);
+		//solver.colgenCuda(a, b, msg);
+		//solver.colgen(a, b, msg);
 
 		//distances: 6
 		//coprimes size : 21
@@ -84,7 +87,7 @@ int main(int argc, char* argv[]) {
 			"Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
 
 		std::vector<std::string> dirs = {
-			 "ClassicImages", //"Shapes"
+			 "ClassicImages", "Shapes"
 			 //"WhiteNoise", "CauchyDensity", "GRFmoderate","MicroscopyImages",
 			 //"GRFrough", "GRFsmooth", "LogGRF", "LogitGRF",,
 		};
@@ -93,10 +96,26 @@ int main(int argc, char* argv[]) {
 			 "1001.csv", "1002.csv", "1003.csv", "1004.csv", "1005.csv",
 			 "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv" };
 
-		std::vector<std::string> Ss = { "32", "64", "128", "256", "512" };
+		std::vector<std::string> Ss = { "256", "512" };
 
-		for (const auto& dtype : dirs) {
-			for (const auto& S : Ss) {
+		for (const auto& S : Ss) {
+			for (const auto& dtype : dirs) {
+				int n = std::stoi(S);// a.getN();
+
+				std::set<int> tauset;
+				for (int v = 0; v < n; ++v)
+					for (int w = 0; w < n; ++w)
+						tauset.insert(static_cast<int>(pow(v, 2) + pow(w, 2)));
+
+				vector<int> tau;
+				for (auto v : tauset)
+					tau.push_back(v);
+
+				int TT = std::min<int>(1024, static_cast<int>(tau.size() - 1));
+
+				DOT::Solver solver;
+				solver.init_dist_from_to(tau, 0, TT, true);
+
 				for (const auto& f11 : Fs) {
 					for (const auto& f22 : Fs)
 						if (f11 < f22) {
@@ -111,11 +130,11 @@ int main(int argc, char* argv[]) {
 
 							std::string msg = dtype + " " + f11 + " " + f22;
 
-							DOT::Solver solver;
+							//if (n < 256)
+							//	solver.bipartite(a, b, msg);
+							solver.colgenCuda(a, b, msg);
+							solver.colgen(a, b, msg);
 
-							// for (int tau : {1,  5,  10, 15, 20, 25, 30, 35, 40, 45,
-							//                50, 55, 60, 65, 70, 75, 80, 85, 95, 100})
-							solver.colgen(a, b, 15, msg);
 						}
 				}
 			}
@@ -146,7 +165,7 @@ int main(int argc, char* argv[]) {
 		PRINT("start solver %lld %lld %lld\n", cc, a.balance(), b.balance());
 		DOT::Solver solver;
 
-		double dist = solver.bipartite(a, b);
+		double dist = solver.bipartite(a, b, "");
 
 		// TODO: FIX double dist2 = solver.tripartite(a, b);
 	}
