@@ -104,6 +104,120 @@ public:
 
 private:
   // Implementation of the Block Search pivot rule
+  class BlockSearchPivotRuleOld {
+  private:
+    // References to the NetworkSimplex class
+    const IntVector &_source;
+    const IntVector &_target;
+    const CostVector &_cost;
+    const BoolVector &_state;
+    const CostVector &_pi;
+    int &_in_arc;
+    int _arc_num;
+    int _dummy_arc;
+
+    // Pivot rule data
+    int _next_arc;
+
+  public:
+    // Constructor
+    BlockSearchPivotRuleOld(NetSimplex &ns)
+        : _source(ns._source), _target(ns._target), _cost(ns._cost),
+          _state(ns._state), _pi(ns._pi), _in_arc(ns.in_arc),
+          _arc_num(ns._arc_num), _dummy_arc(ns._dummy_arc),
+          _next_arc(ns._next_arc) {}
+
+    // Find next entering arc
+    bool findEnteringArc() {
+//      int min = 0, min1=0, min2 = 0, min3 = 0, min4 = 0;
+//      int _in_arc1, _in_arc2, _in_arc3, _in_arc4;
+//      int block = (_arc_num - _dummy_arc+1) / 4;
+//#pragma omp parallel sections num_threads(4)
+//      {
+//#pragma omp section
+//         {
+//            for (int e = _dummy_arc, e_max = _dummy_arc+block; e < e_max; ++e) {
+//               int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+//               if (c < min1) {
+//                  min1 = c;
+//                  _in_arc1 = e;
+//               }
+//            }
+//         }
+//#pragma omp section
+//         {
+//            for (int e = _dummy_arc+block, e_max = _dummy_arc+2*block; e < e_max; ++e) {
+//               int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+//               if (c < min2) {
+//                  min2 = c;
+//                  _in_arc2 = e;
+//               }
+//            }
+//         }
+//#pragma omp section
+//         {
+//            for (int e = _dummy_arc+2*block, e_max = _dummy_arc+3*block; e < e_max; ++e) {
+//               int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+//               if (c < min3) {
+//                  min3 = c;
+//                  _in_arc3 = e;
+//               }
+//            }
+//         }
+//#pragma omp section
+//         {
+//            for (int e = _dummy_arc+3*block, e_max = std::min(_arc_num, _dummy_arc+4*block); e < e_max; ++e) {
+//               int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+//               if (c < min4) {
+//                  min4 = c;
+//                  _in_arc4 = e;
+//               }
+//            }
+//         }
+//      }
+//
+//      if (min1 < min) {
+//         min = min1;
+//         _in_arc = _in_arc1;
+//      }
+//      if (min2 < min) {
+//         min = min2;
+//         _in_arc = _in_arc2;
+//      }
+//      if (min3 < min) {
+//         min = min3;
+//         _in_arc = _in_arc3;
+//      }
+//      if (min4 < min) {
+//         min = min4;
+//         _in_arc = _in_arc4;
+//      }
+
+       int min = 0;
+#pragma omp parallel for shared(min)
+       for (int e = _dummy_arc; e < _arc_num; ++e) {
+         int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+               if (c < min) {
+#pragma omp critical
+                   {
+                  if (c < min) {
+                     min = c;
+                     _in_arc = e;
+                  }
+                  }
+               }
+               }
+
+      if (min >= 0)
+         return false;
+
+      _next_arc = _in_arc;
+      return true;
+    }
+
+  }; // class BlockSearchPivotRule
+
+  // Implementation of the Block Search pivot rule
   class BlockSearchPivotRule {
   private:
     // References to the NetworkSimplex class

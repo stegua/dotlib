@@ -33,8 +33,8 @@ int main(int argc, char *argv[]) {
     DOT::Histogram2D a;
     DOT::Histogram2D b;
 
-    std::string f1 = "data32_1006.csv";
-    std::string f2 = "data32_1007.csv";
+    std::string f1 = "data64_1006.csv";
+    std::string f2 = "data64_1007.csv";
 
     a.parse(base + "Shapes" + SEP + f1);
     b.parse(base + "Shapes" + SEP + f2);
@@ -50,8 +50,8 @@ int main(int argc, char *argv[]) {
 
     DOT::Solver solver;
 
-    // solver.tripartiteColgen(a, b);
-    solver.nearbyUB(a, b, 20, msg);
+    solver.colgen(a, b, 30, msg);
+    // solver.nearbyUB(a, b, 20, msg);
   }
   if (false) {
     std::string SEP = "\\";
