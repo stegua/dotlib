@@ -24,8 +24,8 @@ public:
   const bool STATE_LOWER = true;
 
   // Direction constants for tree arcs
-  const int DIR_DOWN = -1;
-  const int DIR_UP = 1;
+  const char DIR_DOWN = -1;
+  const char DIR_UP = 1;
 
   // Parameters of the problem
   int64_t total_mass;
@@ -48,7 +48,7 @@ public:
   vector<int> sister;
   vector<int> successors;
 
-  vector<char> direction;
+  vector<char> fatherArcDir;
   vector<bool> state;
 
   int root;
@@ -61,6 +61,8 @@ public:
   int tot_nodes; // N + 1 root
 
   int in_arc;    // Arc entering the basis
+  int u_in;      // Source of entering node
+  int v_in;      // Target of entering node
   int join_node; // Node closing the cycle
   int delta;     // amount of flow change in the cycle
 
@@ -81,7 +83,6 @@ public:
     cost.resize(M0, 0);
     flow.resize(tot_arcs, 0);
     state.resize(tot_arcs, STATE_LOWER);
-    direction.resize(tot_arcs, 0);
 
     // Node data
     balance.resize(tot_nodes, 0);
@@ -90,6 +91,8 @@ public:
     // Data for storing the spanning tree basis
     father.resize(tot_nodes, 0);
     fatherArc.resize(tot_nodes, 0);
+    fatherArcDir.resize(tot_nodes, 0);
+
     son.resize(tot_nodes, 0);
     brother.resize(tot_nodes, 0);
     sister.resize(tot_nodes, 0);
@@ -131,6 +134,7 @@ private:
     for (int v = 0, e = 0; v < N; ++v, ++e) {
       father[v] = root;
       fatherArc[v] = e;
+      fatherArcDir[v] = -1;
       brother[v] = v + 1;
       sister[v] = v - 1;
       son[v] = 0;
@@ -138,12 +142,12 @@ private:
       state[e] = STATE_TREE;
 
       if (balance[v] >= 0) {
-        direction[e] = DIR_UP;
+        fatherArcDir[e] = DIR_UP;
         source[e] = v;
         target[e] = root;
         flow[e] = balance[v];
       } else {
-        direction[e] = DIR_DOWN;
+        fatherArcDir[e] = DIR_DOWN;
         pi[v] = ART_COST;
         source[e] = root;
         target[e] = v;
@@ -158,6 +162,7 @@ private:
     int best = 0;
 
     for (int e = M0; e < M; ++e) {
+      // Ma serve lo stato? Se è in base dovrebbe sempre essere positivo!
       int c = state[e] * (cost[e] + pi[source[e]] - pi[target[e]]);
       if (c < best) {
         best = c;
@@ -189,9 +194,8 @@ private:
 
   // Look for leaving variable
   void findLeavingArc() {
-    int first, second;
-    first = source[in_arc];
-    second = target[in_arc];
+    int first = source[in_arc];
+    int second = target[in_arc];
 
     int MAX = std::numeric_limits<int>::max();
     delta = MAX;
@@ -203,12 +207,12 @@ private:
     for (int u = first; u != join_node; u = father[u]) {
       e = fatherArc[u];
       d = flow[e];
-      if (_pred_dir[u] == DIR_DOWN)
+      if (fatherArcDir[u] == DIR_DOWN)
         d = MAX - d;
 
       if (d < delta) {
         delta = d;
-        u_out = u;
+        join_node = u;
         result = 1;
       }
     }
@@ -217,16 +221,17 @@ private:
     for (int u = second; u != join_node; u = father[u]) {
       e = fatherArc[u];
       d = flow[e];
-      if (_pred_dir[u] == DIR_UP)
+      if (fatherArcDir[u] == DIR_UP)
         d = MAX - d;
 
       if (d <= delta) {
         delta = d;
-        u_out = u;
+        join_node = u;
         result = 2;
       }
     }
 
+    // TODO: Check if this is correct?
     if (result == 1) {
       u_in = first;
       v_in = second;

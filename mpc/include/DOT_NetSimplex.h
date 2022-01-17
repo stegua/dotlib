@@ -32,6 +32,18 @@
 #include "DOT_NetSimplexUnit.h"
 
 namespace DOT {
+static void eati_search(int e, int e_max, const int *state, const int *cost,
+                        const int *pi, const int *source, const int *target,
+                        int *min, int *in_arc) {
+  min[0] = 0;
+  for (int i = e; i < e_max; ++i) {
+    int c = state[i] * (cost[i] + pi[source[i]] - pi[target[i]]);
+    if (c < min[0]) {
+      min[0] = c;
+      in_arc[0] = i;
+    }
+  }
+}
 
 class NetSimplex {
 public:
@@ -78,7 +90,7 @@ public:
   IntVector _succ_num;
   IntVector _last_succ;
   CharVector _pred_dir;
-  BoolVector _state;
+  IntVector _state;
   IntVector _dirty_revs;
 
   int _root;
@@ -91,10 +103,13 @@ public:
   const int INF;
 
   double _runtime;
+  double _time_pricing;
+  double _time_update_duals;
+  double _time_update_basis;
 
   double _timelimit;
   std::string _verbosity;
-  double _opt_tolerance;
+  int _opt_tolerance;
 
   int N_IT_LOG;
 
@@ -102,121 +117,11 @@ public:
 
   double t1, t2, t3, t4, t5, t6;
 
+  const int BLOCK_SIZE_FACTOR = 4;
+  const int MIN_BLOCK_SIZE = 20;
+  int _block_size;
+
 private:
-  // Implementation of the Block Search pivot rule
-  class BlockSearchPivotRuleOld {
-  private:
-    // References to the NetworkSimplex class
-    const IntVector &_source;
-    const IntVector &_target;
-    const CostVector &_cost;
-    const BoolVector &_state;
-    const CostVector &_pi;
-    int &_in_arc;
-    int _arc_num;
-    int _dummy_arc;
-
-    // Pivot rule data
-    int _next_arc;
-
-  public:
-    // Constructor
-    BlockSearchPivotRuleOld(NetSimplex &ns)
-        : _source(ns._source), _target(ns._target), _cost(ns._cost),
-          _state(ns._state), _pi(ns._pi), _in_arc(ns.in_arc),
-          _arc_num(ns._arc_num), _dummy_arc(ns._dummy_arc),
-          _next_arc(ns._next_arc) {}
-
-    // Find next entering arc
-    bool findEnteringArc() {
-//      int min = 0, min1=0, min2 = 0, min3 = 0, min4 = 0;
-//      int _in_arc1, _in_arc2, _in_arc3, _in_arc4;
-//      int block = (_arc_num - _dummy_arc+1) / 4;
-//#pragma omp parallel sections num_threads(4)
-//      {
-//#pragma omp section
-//         {
-//            for (int e = _dummy_arc, e_max = _dummy_arc+block; e < e_max; ++e) {
-//               int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
-//               if (c < min1) {
-//                  min1 = c;
-//                  _in_arc1 = e;
-//               }
-//            }
-//         }
-//#pragma omp section
-//         {
-//            for (int e = _dummy_arc+block, e_max = _dummy_arc+2*block; e < e_max; ++e) {
-//               int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
-//               if (c < min2) {
-//                  min2 = c;
-//                  _in_arc2 = e;
-//               }
-//            }
-//         }
-//#pragma omp section
-//         {
-//            for (int e = _dummy_arc+2*block, e_max = _dummy_arc+3*block; e < e_max; ++e) {
-//               int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
-//               if (c < min3) {
-//                  min3 = c;
-//                  _in_arc3 = e;
-//               }
-//            }
-//         }
-//#pragma omp section
-//         {
-//            for (int e = _dummy_arc+3*block, e_max = std::min(_arc_num, _dummy_arc+4*block); e < e_max; ++e) {
-//               int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
-//               if (c < min4) {
-//                  min4 = c;
-//                  _in_arc4 = e;
-//               }
-//            }
-//         }
-//      }
-//
-//      if (min1 < min) {
-//         min = min1;
-//         _in_arc = _in_arc1;
-//      }
-//      if (min2 < min) {
-//         min = min2;
-//         _in_arc = _in_arc2;
-//      }
-//      if (min3 < min) {
-//         min = min3;
-//         _in_arc = _in_arc3;
-//      }
-//      if (min4 < min) {
-//         min = min4;
-//         _in_arc = _in_arc4;
-//      }
-
-       int min = 0;
-#pragma omp parallel for shared(min)
-       for (int e = _dummy_arc; e < _arc_num; ++e) {
-         int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
-               if (c < min) {
-#pragma omp critical
-                   {
-                  if (c < min) {
-                     min = c;
-                     _in_arc = e;
-                  }
-                  }
-               }
-               }
-
-      if (min >= 0)
-         return false;
-
-      _next_arc = _in_arc;
-      return true;
-    }
-
-  }; // class BlockSearchPivotRule
-
   // Implementation of the Block Search pivot rule
   class BlockSearchPivotRule {
   private:
@@ -224,7 +129,7 @@ private:
     const IntVector &_source;
     const IntVector &_target;
     const CostVector &_cost;
-    const BoolVector &_state;
+    const IntVector &_state;
     const CostVector &_pi;
     int &_in_arc;
     int _arc_num;
@@ -243,56 +148,94 @@ private:
         : _source(ns._source), _target(ns._target), _cost(ns._cost),
           _state(ns._state), _pi(ns._pi), _in_arc(ns.in_arc),
           _arc_num(ns._arc_num), _dummy_arc(ns._dummy_arc),
-          _next_arc(ns._next_arc), negeps(0) {
+          _next_arc(ns._next_arc), negeps(ns._opt_tolerance) {
       // The main parameters of the pivot rule
-      const double BLOCK_SIZE_FACTOR = 1;
+      const double BLOCK_SIZE_FACTOR = 4;
       const int MIN_BLOCK_SIZE = 20;
 
       _block_size =
           (std::max)(int(BLOCK_SIZE_FACTOR *
                          std::sqrt(double(_arc_num) - double(_dummy_arc))),
-                     MIN_BLOCK_SIZE);
+                     int(BLOCK_SIZE_FACTOR *
+                         std::sqrt(double(_source.size()))));
     }
 
     // Find next entering arc
     bool findEnteringArc() {
       int min = 0;
+      int e = _next_arc;
+      int M = _arc_num;
+      int M0 = _dummy_arc;
+      int e_max = std::min(M, e + _block_size);
 
-      int cnt = _block_size;
+      while (e < M) {
+        eati_search(e, e_max, &_state[0], &_cost[0], &_pi[0], &_source[0],
+                    &_target[0], &min, &_in_arc);
 
-      for (int e = _next_arc; e < _arc_num; ++e) {
-        int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
-        if (c < min) {
-          min = c;
-          _in_arc = e;
+        if (min < 0) {
+          _next_arc = _in_arc;
+          return true;
         }
-        if (--cnt == 0) {
-          if (min < negeps)
-            goto search_end;
-          cnt = _block_size;
-        }
+
+        e = e_max;
+        e_max = std::min(M, e + _block_size);
       }
 
-      for (int e = _dummy_arc; e < _next_arc; ++e) {
-        int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
-        if (c < min) {
-          min = c;
-          _in_arc = e;
+      e = M0;
+      e_max = std::min(_next_arc, e + _block_size);
+
+      while (e < _next_arc) {
+        eati_search(e, e_max, &_state[0], &_cost[0], &_pi[0], &_source[0],
+                    &_target[0], &min, &_in_arc);
+
+        if (min < 0) {
+          _next_arc = _in_arc;
+          return true;
         }
-        if (--cnt == 0) {
-          if (min < negeps)
-            goto search_end;
-          cnt = _block_size;
-        }
+
+        e = e_max;
+        e_max = std::min(_next_arc, e + _block_size);
       }
 
-      if (min >= negeps)
-        return false;
-
-    search_end:
-      _next_arc = _in_arc;
-      return true;
+      return false;
     }
+
+    //  int min = negeps;
+
+    //  int cnt = _block_size;
+
+    //  for (int e = _next_arc; e < _arc_num; ++e) {
+    //    int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+    //    if (c < min) {
+    //      min = c;
+    //      _in_arc = e;
+    //    }
+    //    if (--cnt == 0) {
+    //      if (min < negeps)
+    //        goto search_end;
+    //      cnt = _block_size;
+    //    }
+    //  }
+
+    //  for (int e = _dummy_arc; e < _next_arc; ++e) {
+    //    int c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
+    //    if (c < min) {
+    //      min = c;
+    //      _in_arc = e;
+    //    }
+    //    if (--cnt == 0) {
+    //      if (min < negeps)
+    //        goto search_end;
+    //      cnt = _block_size;
+    //    }
+    //  }
+
+    //  if (min >= negeps)
+    //    return false;
+
+    // search_end:
+    //  _next_arc = _in_arc;
+    //  return true;
 
   }; // class BlockSearchPivotRule
 
@@ -358,13 +301,18 @@ public:
     N_IT_LOG = 1000; // check runtime every IT_LOG iterations
     _timelimit = std::numeric_limits<double>::max();
     _verbosity = DOT_VAL_INFO;
-    _opt_tolerance = 1e-06;
+    _opt_tolerance = 0;
     _iterations = 0;
     // Benchmarking
     t1 = 0.0, t2 = 0.0, t3 = 0.0, t4 = 0.0, t5 = 0.0, t6 = 0.0;
+
+    // Block size for the pivot
+    _block_size =
+        std::max(int(BLOCK_SIZE_FACTOR * std::sqrt(double(max_arc_num))),
+                 MIN_BLOCK_SIZE);
   }
 
-  NetSimplex(const NetSimplexUnit &o)
+  NetSimplex(const NetSimplex &o)
       : _source(o._source), _target(o._target),
         _supply(o._supply.begin(), o._supply.end()),
         _flow(o._flow.begin(), o._flow.end()),
@@ -386,7 +334,7 @@ public:
     // Reset arc variables
     for (int e = 0; e < _arc_num; ++e) {
       _state[e] = STATE_LOWER;
-      _flow[e] = 0.0;
+      _flow[e] = 0;
     }
 
     if (!init())
@@ -563,7 +511,7 @@ public:
     _timelimit = t;
     //    PRINT("INFO: change <timelimit> to %f\n", t);
   }
-  void setOptTolerance(double o) {
+  void setOptTolerance(int o) {
     _opt_tolerance = o;
     //    PRINT("INFO: change <opt_tolerance> to %f\n", o);
   }
@@ -673,6 +621,46 @@ private:
     return true;
   }
 
+  bool pricing() {
+
+    int min = 0;
+    int e = _next_arc;
+    int M = _arc_num;
+    int M0 = _dummy_arc;
+    int e_max = std::min(M, e + _block_size);
+
+    while (e < M) {
+      para_search(e, e_max, &_state[0], &_cost[0], &_pi[0], &_source[0],
+                  &_target[0], &min, &in_arc);
+
+      if (min < 0) {
+        _next_arc = in_arc;
+        return true;
+      }
+
+      e = e_max;
+      e_max = std::min(M, e + _block_size);
+    }
+
+    e = M0;
+    e_max = std::min(_next_arc, e + _block_size);
+
+    while (e < _next_arc) {
+      para_search(e, e_max, &_state[0], &_cost[0], &_pi[0], &_source[0],
+                  &_target[0], &min, &in_arc);
+
+      if (min < 0) {
+        _next_arc = in_arc;
+        return true;
+      }
+
+      e = e_max;
+      e_max = std::min(_next_arc, e + _block_size);
+    }
+
+    return false;
+  }
+
   // Find the join node
   void findJoinNode() {
     int u = _source[in_arc];
@@ -746,15 +734,15 @@ private:
     if (delta > 0) {
       _flow[in_arc] += delta;
 
-#pragma omp parallel sections num_threads(2)
+      //#pragma omp parallel sections num_threads(2)
       {
-#pragma omp section
+        //#pragma omp section
         {
           for (int u = _source[in_arc]; u != join; u = _parent[u]) {
             _flow[_pred[u]] -= _pred_dir[u] * delta;
           }
         }
-#pragma omp section
+        //#pragma omp section
         {
           for (int u = _target[in_arc]; u != join; u = _parent[u]) {
             _flow[_pred[u]] += _pred_dir[u] * delta;
@@ -920,14 +908,19 @@ private:
     // Benchmarking
 
     // Execute the Network Simplex algorithm
+    t1 = 0.0;
     while (true) {
+      _iterations++;
+
       auto start_t = std::chrono::steady_clock::now();
+      // bool stop = pricing();
       bool stop = pivot.findEnteringArc();
       auto end_t = std::chrono::steady_clock::now();
-      t1 += double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t -
-                                                                        start_t)
-                       .count()) /
-            1000000000;
+      _time_pricing +=
+          double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t -
+                                                                      start_t)
+                     .count()) /
+          1000000000;
 
       if (!stop)
         break;
@@ -959,41 +952,42 @@ private:
       //                 .count()) /
       //      1000000000;
 
-      // start_t = std::chrono::steady_clock::now();
+      start_t = std::chrono::steady_clock::now();
       updateTreeStructure();
-      // end_t = std::chrono::steady_clock::now();
-      // t5 += double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t
-      // -
-      //                                                                  start_t)
-      //                 .count()) /
-      //      1000000000;
+      end_t = std::chrono::steady_clock::now();
+      _time_update_basis +=
+          double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t -
+                                                                      start_t)
+                     .count()) /
+          1000000000;
 
       start_t = std::chrono::steady_clock::now();
       updatePotential();
       end_t = std::chrono::steady_clock::now();
-      t6 += double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t -
-                                                                        start_t)
-                       .count()) /
-            1000000000;
+      _time_update_duals +=
+          double(std::chrono::duration_cast<std::chrono::nanoseconds>(end_t -
+                                                                      start_t)
+                     .count()) /
+          1000000000;
 
       // Add as log file
-      _iterations++;
-      if (N_IT_LOG > 0) {
-        if (_iterations % N_IT_LOG == 0) {
-          auto end_t = std::chrono::steady_clock::now();
-          double tot =
-              double(std::chrono::duration_cast<std::chrono::nanoseconds>(
-                         end_t - start_tt)
-                         .count()) /
-              1000000000;
-          if (tot > _timelimit)
-            return ProblemType::TIMELIMIT;
-          if (_verbosity == DOT_VAL_DEBUG)
-            PRINT("NetSIMPLEX inner loop | it: %ld, distance: %.4f, runtime: "
-                  "%.4f\n",
-                  _iterations, totalCost(), tot);
-        }
-      }
+      // if (N_IT_LOG > 0) {
+      //	if (_iterations % N_IT_LOG == 0) {
+      //		auto end_t = std::chrono::steady_clock::now();
+      //		double tot =
+      //			double(std::chrono::duration_cast<std::chrono::nanoseconds>(
+      //				end_t - start_tt)
+      //				.count()) /
+      //			1000000000;
+      //		if (tot > _timelimit)
+      //			return ProblemType::TIMELIMIT;
+      //		if (_verbosity == DOT_VAL_DEBUG)
+      //			PRINT("NetSIMPLEX inner loop | it: %ld,
+      // distance: %.4f, runtime: "
+      //				"%.4f\n",
+      //				_iterations, totalCost(), tot);
+      //	}
+      //}
     }
 
     auto end_t = std::chrono::steady_clock::now();
