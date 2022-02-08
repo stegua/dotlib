@@ -731,7 +731,7 @@ public:
           "num_arcs %d\n",
           msg.c_str(), (int)_iterations, fobj, _all, _runtime, (int)_num_arcs);
 
-    return _runtime;
+    return _all;
   }
 
   //--------------------------------------------------------------------------

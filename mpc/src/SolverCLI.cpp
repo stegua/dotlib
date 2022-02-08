@@ -420,7 +420,7 @@ int main(int argc, char *argv[]) {
         "1001.csv", "1002.csv", "1003.csv", "1004.csv", "1005.csv",
         "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"};
 
-    std::vector<std::string> Ss = {"64"};
+    std::vector<std::string> Ss = {"128"};
     //, "64", "128", "256", "512"};
     std::array<double, 4> stat = {0, 0, 0, 0};
     std::array<double, 4> eapi = {0, 0, 0, 0};
@@ -448,25 +448,21 @@ int main(int argc, char *argv[]) {
               // for (int tau : {1,  5,  10, 15, 20, 25, 30, 35, 40, 45,
               //                50, 55, 60, 65, 70, 75, 80, 85, 95, 100})
 
-              //              std::array<double, 4> times =
-              //              solver.mincostflowEati(a, b, msg);
-              std::array<double, 4> times = {0, 0, 0, 0};
-
-              /*solver.bipartiteEati(a, b, msg);
+              std::array<double, 4> times = solver.bipartiteEati(a, b, msg);
               eati[0] += times[0];
               eati[1] += times[1];
               eati[2] += times[2];
               eati[3] += times[3];
-              stat[2] += times[0];*/
+              stat[2] += times[0];
 
-              /*            times = solver.bipartiteEapi(a, b, msg);
-                          eapi[0] += times[0];
-                          eapi[1] += times[1];
-                          eapi[2] += times[2];
-                          eapi[3] += times[3];
-                          stat[1] += times[0];
+              times = solver.bipartiteEapi(a, b, msg);
+              eapi[0] += times[0];
+              eapi[1] += times[1];
+              eapi[2] += times[2];
+              eapi[3] += times[3];
+              stat[1] += times[0];
 
-                          stat[0] += solver.bipartiteCplex(a, b, msg);*/
+              stat[0] += solver.bipartiteCplex(a, b, msg);
 
               stat[3] += solver.colgen(a, b, msg);
               fprintf(stdout, "\n");
