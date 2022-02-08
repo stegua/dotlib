@@ -20,6 +20,52 @@
 
 const double SCALE = 10000.0;
 
+class graph_t {
+public:
+  ~graph_t(void) { free(data); }
+
+  void reserveArcs(int _n, int _m) {
+    n = _n;
+    m = _m;
+    idx = 0;
+
+    size = _n + 3 * _m;
+    data = (int *)malloc(size * sizeof(int));
+
+    supply = &data[0];
+    head = &data[_n + 0 * _m];
+    tail = &data[_n + 1 * _m];
+    cost = &data[_n + 2 * _m];
+  }
+
+  void addNode(int i, int b) { supply[i] = b; }
+
+  void addArc(int i, int j, int c) {
+    head[idx] = i;
+    tail[idx] = j;
+    cost[idx] = c;
+    idx++;
+  }
+
+  void reset(void) { memset(data, 0, size); }
+
+  int getSupply(int i) { return supply[i]; }
+
+  int n;
+  int m;
+
+  int idx;
+  int size;
+
+  int *data;
+
+  int *supply;
+
+  int *head;
+  int *tail;
+  int *cost;
+};
+
 struct coprimes_t {
 public:
   coprimes_t(int _v, int _w, int _c) : v(_v), w(_w), c_vw(_c) {}
@@ -783,10 +829,180 @@ public:
                 [](const auto &a, const auto &b) { return a.c_vw < b.c_vw; });
   }
 
+  //--------------------------------------------------------------------------
+  void parseDimacs(const std::string &filename) {
+    std::ifstream in_file(filename);
+
+    if (!in_file) {
+      fprintf(stdout, "FATAL ERROR: Cannot open file %s.\n", filename.c_str());
+      exit(EXIT_FAILURE);
+    }
+
+    G.reset();
+
+    // Read first row, and return row length
+    int idx = 0;
+    int m = 0;
+    while (idx < m) {
+      std::string line;
+      std::getline(in_file, line);
+      std::stringstream lineStream(line);
+      std::string cell;
+      // First char
+      std::getline(lineStream, cell, ' ');
+      if (cell == "c" || cell == "n")
+        continue;
+      if (cell == "p") {
+        // Read "asn"
+        std::getline(lineStream, cell, ' ');
+        // Read "number of nodes"
+        std::getline(lineStream, cell, ' ');
+        int n = atoi(cell.c_str());
+        // Read "number of nodes"
+        std::getline(lineStream, cell, ' ');
+        m = atoi(cell.c_str());
+
+        fprintf(stdout, "read dimacs network -> n: %d, m:%d\n", n, m);
+        G.reserveArcs(n, m);
+
+        for (int i = 0; i < n / 2; ++i)
+          G.addNode(i, 1);
+        for (int i = n / 2; i < n; ++i)
+          G.addNode(i, -1);
+      }
+
+      if (cell == "a") {
+        std::getline(lineStream, cell, ' ');
+        int i = atoi(cell.c_str());
+        std::getline(lineStream, cell, ' ');
+        int j = atoi(cell.c_str());
+        std::getline(lineStream, cell, ' ');
+        int c = atoi(cell.c_str());
+
+        G.addArc(i - 1, j - 1, c);
+        idx++;
+      }
+    }
+  }
+
+  //--------------------------------------------------------------------------
+  double solveDimacs(const std::string &filename, const std::string &msg = "") {
+    if (filename == "netcplex") {
+      auto start_t = std::chrono::steady_clock::now();
+
+      // Start CPLEX definition
+      CPXENVptr env = NULL;
+      CPXNETptr net = NULL;
+      int status = 0;
+
+      env = CPXopenCPLEX(&status);
+
+      if (env == NULL) {
+        char errmsg[CPXMESSAGEBUFSIZE];
+        fprintf(stderr, "Could not open CPLEX environment.\n");
+        CPXgeterrorstring(env, status, errmsg);
+        fprintf(stderr, "%s", errmsg);
+        return -1;
+      }
+
+      CPXsetintparam(env, CPXPARAM_ScreenOutput, CPX_OFF);
+      CPXsetintparam(env, CPXPARAM_Network_Tolerances_Feasibility, 1e-09);
+      CPXsetintparam(env, CPXPARAM_Network_Tolerances_Optimality, 1e-09);
+
+      net = CPXNETcreateprob(env, &status, "netCplex");
+
+      if (net == NULL) {
+        fprintf(stderr, "Failed to create network object.\n");
+        fflush(stderr);
+        exit(-1);
+      }
+      // Build Network instance
+      CPXNETchgobjsen(env, net, CPX_MIN);
+
+      // Add all nodes
+      vector<double> ss(G.n, 0);
+      for (int i = 0; i < G.n; ++i)
+        ss[i] = G.getSupply(i);
+
+      CPXNETaddnodes(env, net, (int)G.n, &ss[0], NULL);
+
+      // Add all arcs
+      vector<int> tail;
+      vector<int> head;
+      vector<double> obj(G.m, 0);
+      for (int e = 0; e < G.m; ++e)
+        obj[e] = G.cost[e];
+
+      CPXNETaddarcs(env, net, G.m, G.tail, G.head, NULL, NULL, &obj[0], NULL);
+
+      // Solve problem
+      auto start = std::chrono::steady_clock::now();
+      status = CPXNETprimopt(env, net);
+      auto end = std::chrono::steady_clock::now();
+      auto _runtime =
+          double(
+              std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+                  .count()) /
+          1000;
+
+      if (status) {
+        fprintf(stderr, "Failed to optimize network.\n");
+        fflush(stderr);
+        exit(-1);
+      }
+      int solstat = CPXNETgetstat(env, net);
+
+      double objval = 0.0;
+      CPXNETgetobjval(env, net, &objval);
+
+      objval = objval / double(G.n);
+
+      _iterations = CPXNETgetitcnt(env, net);
+
+      /* Free up the problem as allocated by CPXNETcreateprob, if necessary */
+      if (net != NULL) {
+        status = CPXNETfreeprob(env, &net);
+        if (status) {
+          fprintf(stderr, "CPXNETfreeprob failed, error code %d.\n", status);
+        }
+      }
+
+      /* Free up the CPLEX environment, if necessary */
+      if (env != NULL) {
+        status = CPXcloseCPLEX(&env);
+
+        if (status) {
+          char errmsg[CPXMESSAGEBUFSIZE];
+          fprintf(stderr, "Could not close CPLEX environment.\n");
+          CPXgeterrorstring(env, status, errmsg);
+          fprintf(stderr, "%s", errmsg);
+        }
+      }
+
+      // Merge with previous code
+      auto end_t = std::chrono::steady_clock::now();
+      auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                             end_t - start_t)
+                             .count()) /
+                  1000;
+      _num_arcs = G.m;
+
+      PRINT("BIP-PLEX %s it %d UB %.6f runtime %.4f simplex %.4f "
+            "num_arcs %d\n",
+            msg.c_str(), (int)_iterations, objval, _all, _runtime,
+            (int)_num_arcs);
+
+      return _all;
+    }
+  }
+
   // List of pair of coprimes number between (-L, L)
   std::vector<coprimes_t> coprimes;
 
 private:
+  // Internal graph
+  graph_t G;
+
   // Status of the solver
   ProblemType _status;
 
