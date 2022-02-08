@@ -372,6 +372,42 @@ int main(int argc, char *argv[]) {
     // testEapi2();
   }
 
+  if (true) {
+    std::string SEP = "\\";
+
+    std::string base = "C:\\Users\\Gualandi\\Data\\ColorTransfer";
+    std::vector<std::string> Fs = {"prova.net"};
+    DOT::Solver solver;
+
+    // Profiling algorithms
+    std::array<double, 4> stat = {0, 0, 0, 0};
+    std::array<double, 4> eapi = {0, 0, 0, 0};
+    std::array<double, 4> eati = {0, 0, 0, 0};
+
+    for (const auto &filename : Fs) {
+      solver.parseDimacs(base + SEP + filename);
+
+      // std::array<double, 4> times = solver.solveDimacs("bipartiteEapi");
+
+      // eati[0] += times[0];
+      // eati[1] += times[1];
+      // eati[2] += times[2];
+      // eati[3] += times[3];
+      // stat[2] += times[0];
+
+      // times = solver.solveDimacs("bipartiteEapi");
+      // eapi[0] += times[0];
+      // eapi[1] += times[1];
+      // eapi[2] += times[2];
+      // eapi[3] += times[3];
+      // stat[1] += times[0];
+
+      stat[0] += solver.solveDimacs("netcplex");
+
+      // stat[3] += solver.solverDimacs("colgen");
+    }
+  }
+
   if (false) {
     std::string SEP = "\\";
 
@@ -404,7 +440,7 @@ int main(int argc, char *argv[]) {
     solver.bipartiteCplex(a, b, msg);
   }
 
-  if (true) {
+  if (false) {
     std::string SEP = "\\";
 
     std::string base = "C:\\Users\\Gualandi\\Google "
