@@ -11,9 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\net_cplex.c">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\SolverCLI.cpp">
       <Filter>src</Filter>
     </ClCompile>

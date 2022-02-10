@@ -148,7 +148,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\net_cplex.c" />
     <ClCompile Include="..\..\..\src\SolverCLI.cpp" />
   </ItemGroup>
   <ItemGroup>

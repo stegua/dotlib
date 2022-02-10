@@ -17,8 +17,8 @@
 int seed = 13;
 
 std::random_device
-    rd; // Will be used to obtain a seed for the random number engine
-std::mt19937 gen(seed); // Standard mersenne_twister_engine seeded with rd()
+    rd;  // Will be used to obtain a seed for the random number engine
+std::mt19937 gen(seed);  // Standard mersenne_twister_engine seeded with rd()
 std::uniform_real_distribution<> Uniform01(0, 1);
 
 int testEapi1() {
@@ -110,13 +110,13 @@ int testEapi4() {
   solver.addNode(4, 0);
   solver.addNode(5, -1);
 
-  solver.addArc(0, 1, 1); // 7
-  solver.addArc(0, 3, 1); // 8
-  solver.addArc(1, 2, 1); // 9
-  solver.addArc(1, 4, 1); // 10
-  solver.addArc(2, 5, 1); // 11
-  solver.addArc(3, 4, 1); // 12
-  solver.addArc(4, 5, 1); // 13
+  solver.addArc(0, 1, 1);  // 7
+  solver.addArc(0, 3, 1);  // 8
+  solver.addArc(1, 2, 1);  // 9
+  solver.addArc(1, 4, 1);  // 10
+  solver.addArc(2, 5, 1);  // 11
+  solver.addArc(3, 4, 1);  // 12
+  solver.addArc(4, 5, 1);  // 13
 
   int r = solver.solve();
   return r;
@@ -143,18 +143,18 @@ int testEapi5() {
   solver.addNode(7, -1);
   solver.addNode(8, -2);
 
-  solver.addArc(0, 1, 1); // 9
-  solver.addArc(0, 3, 1); // 10
-  solver.addArc(1, 2, 1); // 11
-  solver.addArc(1, 4, 1); // 12
-  solver.addArc(2, 5, 1); // 13
-  solver.addArc(3, 4, 1); // 14
-  solver.addArc(3, 6, 1); // 15
-  solver.addArc(4, 5, 1); // 16
-  solver.addArc(4, 7, 1); // 17
-  solver.addArc(5, 8, 1); // 18
-  solver.addArc(6, 7, 1); // 19
-  solver.addArc(7, 8, 1); // 20
+  solver.addArc(0, 1, 1);  // 9
+  solver.addArc(0, 3, 1);  // 10
+  solver.addArc(1, 2, 1);  // 11
+  solver.addArc(1, 4, 1);  // 12
+  solver.addArc(2, 5, 1);  // 13
+  solver.addArc(3, 4, 1);  // 14
+  solver.addArc(3, 6, 1);  // 15
+  solver.addArc(4, 5, 1);  // 16
+  solver.addArc(4, 7, 1);  // 17
+  solver.addArc(5, 8, 1);  // 18
+  solver.addArc(6, 7, 1);  // 19
+  solver.addArc(7, 8, 1);  // 20
 
   int r = solver.solve();
   return r;
@@ -181,18 +181,18 @@ int testEapi6() {
   solver.addNode(7, +1);
   solver.addNode(8, -2);
 
-  solver.addArc(0, 1, 1); // 9
-  solver.addArc(0, 3, 1); // 10
-  solver.addArc(1, 2, 1); // 11
-  solver.addArc(1, 4, 1); // 12
-  solver.addArc(2, 5, 1); // 13
-  solver.addArc(3, 4, 1); // 14
-  solver.addArc(3, 6, 1); // 15
-  solver.addArc(4, 5, 1); // 16
-  solver.addArc(4, 7, 1); // 17
-  solver.addArc(5, 8, 1); // 18
-  solver.addArc(6, 7, 1); // 19
-  solver.addArc(7, 8, 1); // 20
+  solver.addArc(0, 1, 1);  // 9
+  solver.addArc(0, 3, 1);  // 10
+  solver.addArc(1, 2, 1);  // 11
+  solver.addArc(1, 4, 1);  // 12
+  solver.addArc(2, 5, 1);  // 13
+  solver.addArc(3, 4, 1);  // 14
+  solver.addArc(3, 6, 1);  // 15
+  solver.addArc(4, 5, 1);  // 16
+  solver.addArc(4, 7, 1);  // 17
+  solver.addArc(5, 8, 1);  // 18
+  solver.addArc(6, 7, 1);  // 19
+  solver.addArc(7, 8, 1);  // 20
 
   int r = solver.solve();
   return r;
@@ -219,31 +219,31 @@ int testEapi7() {
   solver.addNode(7, -1);
   solver.addNode(8, +1);
 
-  solver.addArc(0, 1, 1); // 9
-  solver.addArc(0, 3, 1); // 10
-  solver.addArc(1, 2, 1); // 11
-  solver.addArc(1, 4, 1); // 12
-  solver.addArc(2, 5, 1); // 13
-  solver.addArc(3, 4, 1); // 14
-  solver.addArc(3, 6, 1); // 15
-  solver.addArc(4, 5, 1); // 16
-  solver.addArc(4, 7, 1); // 17
-  solver.addArc(5, 8, 1); // 18
-  solver.addArc(6, 7, 1); // 19
-  solver.addArc(7, 8, 1); // 20
+  solver.addArc(0, 1, 1);  // 9
+  solver.addArc(0, 3, 1);  // 10
+  solver.addArc(1, 2, 1);  // 11
+  solver.addArc(1, 4, 1);  // 12
+  solver.addArc(2, 5, 1);  // 13
+  solver.addArc(3, 4, 1);  // 14
+  solver.addArc(3, 6, 1);  // 15
+  solver.addArc(4, 5, 1);  // 16
+  solver.addArc(4, 7, 1);  // 17
+  solver.addArc(5, 8, 1);  // 18
+  solver.addArc(6, 7, 1);  // 19
+  solver.addArc(7, 8, 1);  // 20
 
-  solver.addArc(1, 0, 1); // 21
-  solver.addArc(3, 0, 1); // 22
-  solver.addArc(2, 1, 1); // 23
-  solver.addArc(4, 1, 1); // 24
-  solver.addArc(5, 2, 1); // 25
-  solver.addArc(4, 3, 1); // 26
-  solver.addArc(6, 3, 1); // 27
-  solver.addArc(5, 4, 1); // 28
-  solver.addArc(7, 4, 1); // 29
-  solver.addArc(8, 5, 1); // 30
-  solver.addArc(7, 6, 1); // 31
-  solver.addArc(8, 7, 1); // 32
+  solver.addArc(1, 0, 1);  // 21
+  solver.addArc(3, 0, 1);  // 22
+  solver.addArc(2, 1, 1);  // 23
+  solver.addArc(4, 1, 1);  // 24
+  solver.addArc(5, 2, 1);  // 25
+  solver.addArc(4, 3, 1);  // 26
+  solver.addArc(6, 3, 1);  // 27
+  solver.addArc(5, 4, 1);  // 28
+  solver.addArc(7, 4, 1);  // 29
+  solver.addArc(8, 5, 1);  // 30
+  solver.addArc(7, 6, 1);  // 31
+  solver.addArc(8, 7, 1);  // 32
 
   int r = solver.solve();
   return r;
@@ -353,8 +353,7 @@ int testEapi9() {
 int main(int argc, char *argv[]) {
   int n = 8;
 
-  if (argc > 1)
-    n = atoi(argv[1]);
+  if (argc > 1) n = atoi(argv[1]);
 
   std::uniform_int_distribution<> Uniform1N(1, n);
 
@@ -376,7 +375,7 @@ int main(int argc, char *argv[]) {
     std::string SEP = "\\";
 
     std::string base = "C:\\Users\\Gualandi\\Data\\ColorTransfer";
-    std::vector<std::string> Fs = {"prova.net"};
+    std::vector<std::string> Fs = {"color-512-seed-13.net"};
     DOT::Solver solver;
 
     // Profiling algorithms
@@ -385,7 +384,13 @@ int main(int argc, char *argv[]) {
     std::array<double, 4> eati = {0, 0, 0, 0};
 
     for (const auto &filename : Fs) {
+      fprintf(stdout, "Step 1\n");
+      fflush(stdout);
+
       solver.parseDimacs(base + SEP + filename);
+
+      fprintf(stdout, "Step 2\n");
+      fflush(stdout);
 
       // std::array<double, 4> times = solver.solveDimacs("bipartiteEapi");
 
@@ -395,7 +400,8 @@ int main(int argc, char *argv[]) {
       // eati[3] += times[3];
       // stat[2] += times[0];
 
-      // times = solver.solveDimacs("bipartiteEapi");
+      stat[1] = solver.solveDimacs("bipartiteEapi");
+      stat[1] = solver.solveDimacs("bipartiteEati");
       // eapi[0] += times[0];
       // eapi[1] += times[1];
       // eapi[2] += times[2];
@@ -411,8 +417,9 @@ int main(int argc, char *argv[]) {
   if (false) {
     std::string SEP = "\\";
 
-    std::string base = "C:\\Users\\Gualandi\\Google "
-                       "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
+    std::string base =
+        "C:\\Users\\Gualandi\\Google "
+        "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
 
     DOT::Histogram2D a;
     DOT::Histogram2D b;
@@ -443,11 +450,12 @@ int main(int argc, char *argv[]) {
   if (false) {
     std::string SEP = "\\";
 
-    std::string base = "C:\\Users\\Gualandi\\Google "
-                       "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
+    std::string base =
+        "C:\\Users\\Gualandi\\Google "
+        "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
 
     std::vector<std::string> dirs = {
-        "ClassicImages", //"Shapes"
+        "ClassicImages",  //"Shapes"
         //"WhiteNoise", "CauchyDensity", "GRFmoderate","MicroscopyImages",
         //"GRFrough", "GRFsmooth", "LogGRF", "LogitGRF",,
     };

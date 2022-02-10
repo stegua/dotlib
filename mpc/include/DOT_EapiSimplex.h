@@ -1,5 +1,5 @@
 /**
- * @fileoverview Copyright (c) 2019-2021, Stefano Gualandi,
+ * @fileoverview Copyright (c) 2019-2022, Stefano Gualandi,
  *               via Ferrata, 1, I-27100, Pavia, Italy
  *
  * @author stefano.gualandi@gmail.com (Stefano Gualandi)
@@ -8,8 +8,9 @@
 
 #pragma once
 
-#include "DOT_Commons.h"
 #include <vector>
+
+#include "DOT_Commons.h"
 using std::vector;
 
 #include <algorithm>
@@ -35,7 +36,6 @@ static void para3_search(int e, int e_max, const int32_t *state,
   int values[4] = {0, 0, 0, 0};
 
   for (size_t i = e; i < e_max; i += 4) {
-
     values[0] = state[i] * (cost[i] + pi[source[i]] - pi[target[i]]);
     values[1] =
         state[i + 1] * (cost[i + 1] + pi[source[i + 1]] - pi[target[i + 1]]);
@@ -129,7 +129,7 @@ static void para_flow(int start, int stop, const int *father, int *flow_pred,
 
 // Main class
 class EapiSimplex {
-public:
+ public:
   // State constants for arcs
   const int STATE_TREE = 0;
   const int STATE_LOWER = 1;
@@ -167,16 +167,16 @@ public:
   // Data related to the underlying digraph
   int N;
   int M;
-  int M0;        // 2*N dummy arcs
-  int tot_nodes; // N + 1 root
+  int M0;         // 2*N dummy arcs
+  int tot_nodes;  // N + 1 root
 
-  int in_arc;    // Arc entering the basis
-  int out_arc;   // Arc leaving the basis
-  int join_node; // Node closing the cycle
-  int delta;     // amount of flow change in the cycle
+  int in_arc;     // Arc entering the basis
+  int out_arc;    // Arc leaving the basis
+  int join_node;  // Node closing the cycle
+  int delta;      // amount of flow change in the cycle
 
-  int q;          // Node with entering arc is the leaving arc
-  int u_in, v_in; // First and second node of the entering arc
+  int q;           // Node with entering arc is the leaving arc
+  int u_in, v_in;  // First and second node of the entering arc
 
   double _runtime;
   double _time_pricing;
@@ -195,11 +195,19 @@ public:
   /*vector<int> arcmin;
   vector<int> arcin;*/
 
-public:
+ public:
   // Standard c'tor
   EapiSimplex(int _n, int _m, int _np = 8)
-      : root(_n), N(_n), M(_n), M0(_n), tot_nodes(N + 1), q(-1), _runtime(0.0),
-        _time_pricing(0), _iterations(0), np(_np) {
+      : root(_n),
+        N(_n),
+        M(_n),
+        M0(_n),
+        tot_nodes(N + 1),
+        q(-1),
+        _runtime(0.0),
+        _time_pricing(0),
+        _iterations(0),
+        np(_np) {
     // Node data
     balance.resize(tot_nodes, 0);
 
@@ -250,7 +258,7 @@ public:
     return idx;
   }
 
-private:
+ private:
   // Initialize internal data structures
   void init() {
     // Start with the basis tree
@@ -258,8 +266,7 @@ private:
 
     // Initialize artifical cost
     int ART_COST = 0;
-    for (int e = M0; e < M; ++e)
-      ART_COST = std::max(ART_COST, cost[e]);
+    for (int e = M0; e < M; ++e) ART_COST = std::max(ART_COST, cost[e]);
     ART_COST = N * (ART_COST + 1);
 
     // Set data for the artificial root node
@@ -267,7 +274,7 @@ private:
     balance[root] = -tot_balance;
 
     father[root] = -1;
-    son[root] = 0; // The first node is the son
+    son[root] = 0;  // The first node is the son
     brother[root] = -1;
     pi[root] = 0;
     edge_pred[root] = -1;
@@ -279,8 +286,7 @@ private:
       father[u] = root;
       son[u] = -1;
       brother[u] = u + 1;
-      if (u + 1 == N)
-        brother[u] = -1;
+      if (u + 1 == N) brother[u] = -1;
       successors[u] = 0;
 
       edge_pred[u] = e;
@@ -345,7 +351,7 @@ private:
   }
 
   bool fullPricing() {
-    int best = 0; // Tutto intero: -std::numeric_limits<float>::min();
+    int best = 0;  // Tutto intero: -std::numeric_limits<float>::min();
 
     for (int e = M0; e < M; ++e) {
       // QUESTION: Potrei avere la lista di quelli fuori base?
@@ -403,8 +409,7 @@ private:
       d = flow_pred[u];
       // TODO: Questo if lo posso portare fuori ed evitare un conto e un
       // confronto
-      if (dir_pred[u] == DIR_DOWN)
-        d = MAX - d;
+      if (dir_pred[u] == DIR_DOWN) d = MAX - d;
 
       if (d < delta) {
         delta = d;
@@ -418,8 +423,7 @@ private:
       d = flow_pred[u];
       // TODO: Questo if lo posso portare fuori ed evitare un conto e un
       // confronto
-      if (dir_pred[u] == DIR_UP)
-        d = MAX - d;
+      if (dir_pred[u] == DIR_UP) d = MAX - d;
 
       if (d <= delta) {
         delta = d;
@@ -492,9 +496,9 @@ private:
 
         int k = son[i];
         if (k == -1)
-          son[i] = j; // O "j" diventa figlio diretto
+          son[i] = j;  // O "j" diventa figlio diretto
         else {
-          int l = k; // Oppure "j" diventa un fratello del primogenito
+          int l = k;  // Oppure "j" diventa un fratello del primogenito
           while (k != -1) {
             l = k;
             k = brother[k];
@@ -631,10 +635,8 @@ private:
   // Update dual variables
   void updatePotentials() {
     int dd = (pi[u_in] - dir_pred[v_in] * cost[edge_pred[v_in]]) - pi[v_in];
-    if (dd == 0)
-      return;
+    if (dd == 0) return;
     if (small_right) {
-
       if (son[v_in] == -1) {
         pi[v_in] += dd;
         return;
@@ -655,8 +657,7 @@ private:
 
         do {
           k = father[l];
-          if (k == u_in)
-            return;
+          if (k == u_in) return;
           l = k;
           k = brother[k];
         } while (k == -1);
@@ -691,8 +692,7 @@ private:
 
         do {
           k = father[l];
-          if (k == root)
-            return;
+          if (k == root) return;
           l = k;
           k = brother[k];
           if (k == v_in) {
@@ -728,8 +728,7 @@ private:
 
       do {
         k = father[l];
-        if (k == root)
-          return;
+        if (k == root) return;
         l = k;
         k = brother[k];
         if (k != -1) {
@@ -760,34 +759,26 @@ private:
 
   void dumpTable() const {
     fprintf(stdout, "\nfather :\t");
-    for (int i = 0; i < tot_nodes; i++)
-      fprintf(stdout, "%d\t", father[i]);
+    for (int i = 0; i < tot_nodes; i++) fprintf(stdout, "%d\t", father[i]);
     fprintf(stdout, "\nson    :\t");
-    for (int i = 0; i < tot_nodes; i++)
-      fprintf(stdout, "%d\t", son[i]);
+    for (int i = 0; i < tot_nodes; i++) fprintf(stdout, "%d\t", son[i]);
     fprintf(stdout, "\nbrother:\t");
-    for (int i = 0; i < tot_nodes; i++)
-      fprintf(stdout, "%d\t", brother[i]);
+    for (int i = 0; i < tot_nodes; i++) fprintf(stdout, "%d\t", brother[i]);
     fprintf(stdout, "\nflow_pr:\t");
-    for (int i = 0; i < tot_nodes; i++)
-      fprintf(stdout, "%d\t", flow_pred[i]);
+    for (int i = 0; i < tot_nodes; i++) fprintf(stdout, "%d\t", flow_pred[i]);
     fprintf(stdout, "\ndir_pr :\t");
-    for (int i = 0; i < tot_nodes; i++)
-      fprintf(stdout, "%d\t", dir_pred[i]);
+    for (int i = 0; i < tot_nodes; i++) fprintf(stdout, "%d\t", dir_pred[i]);
     fprintf(stdout, "\nedge_pr:\t");
-    for (int i = 0; i < tot_nodes; i++)
-      fprintf(stdout, "%d\t", edge_pred[i]);
+    for (int i = 0; i < tot_nodes; i++) fprintf(stdout, "%d\t", edge_pred[i]);
     fprintf(stdout, "\nsuccess:\t");
-    for (int i = 0; i < tot_nodes; i++)
-      fprintf(stdout, "%d\t", successors[i]);
+    for (int i = 0; i < tot_nodes; i++) fprintf(stdout, "%d\t", successors[i]);
     fprintf(stdout, "\npi     :\t");
-    for (int i = 0; i < tot_nodes; i++)
-      fprintf(stdout, "%d\t", pi[i]);
+    for (int i = 0; i < tot_nodes; i++) fprintf(stdout, "%d\t", pi[i]);
     fprintf(stdout, "\n\n");
     fprintf(stdout, "Cost: %d\n", totalCost());
   }
 
-public:
+ public:
   // Runtime in milliseconds
   double runtime() const { return _runtime; }
 
@@ -818,30 +809,28 @@ public:
                      .count()) /
           1000000000;
 
-      if (!stop)
-        break;
+      if (!stop) break;
 
 #ifdef DEBUG
       fprintf(stdout, "arc in: %d = (%d, %d)\n", in_arc, source[in_arc],
               target[in_arc]);
-#endif // DEBUG
+#endif  // DEBUG
 
       // Look for exiting variable
       findJoinNode();
 
 #ifdef DEBUG
       fprintf(stdout, "join node: %d\n", join_node);
-#endif // DEBUG
+#endif  // DEBUG
 
       findLeavingArc();
 
 #ifdef DEBUG
       fprintf(stdout, "arc out: %d = (%d, %d), delta: %d\n", edge_pred[q],
               source[edge_pred[q]], target[edge_pred[q]], delta);
-#endif // DEBUG
+#endif  // DEBUG
 
-      if (delta > 0)
-        changeFlow();
+      if (delta > 0) changeFlow();
 
       // Update data structure
       start_t = std::chrono::steady_clock::now();
@@ -863,12 +852,12 @@ public:
           1000000000;
 #ifdef DEBUG
       dumpTable();
-#endif // DEBUG
+#endif  // DEBUG
     }
 
 #ifdef DEBUG
     dumpSolution();
-#endif // DEBUG
+#endif  // DEBUG
 
     auto end_t = std::chrono::steady_clock::now();
     _runtime += double(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -879,4 +868,4 @@ public:
     return totalCost();
   }
 };
-} // namespace DOT
+}  // namespace DOT
