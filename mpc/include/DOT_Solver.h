@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <numeric>
 
 #include "DOT_EapiSimplex.h"
@@ -879,8 +880,14 @@ class Solver {
 
       int N = G.n;
 
+      // Dual multipliers
+      vector<int> pi;
+      pi.resize(N, 0);
+
       // Auxiliary variables
-      Vars vars(G.n);
+      int NUM_BLOCKS = 2 * N;
+      Vars vars(NUM_BLOCKS);  // one for block o threads?
+
       // TODO: pensare a come gestire questo caso!
       // for (int i = 0; i < G.n; ++i)
       //  vars[i].a = i;
@@ -905,46 +912,64 @@ class Solver {
       // Init the simplex
       _status = simplex.run();
 
+      std::vector<int> indexes;
+      indexes.resize(G.m);
+      std::iota(indexes.begin(), indexes.end(), 0);
+      std::random_device rd;
+      std::mt19937 g(rd());
+      // std::shuffle(indexes.begin(), indexes.end(), g);
+
+      int cnt = 0;
       while (_status != ProblemType::TIMELIMIT) {
         // Take the dual values
         for (int j = 0; j < N; ++j) pi[j] = -simplex.potential(j);
 
-          // Solve separation problem:
-#pragma omp parallel for collapse(2)
-        for (int i = 0; i < n; ++i)
-          for (int j = 0; j < n; ++j) {
-            int best_v = 0;
-            int best_c = -1;
-            int best_n = 0;  // best second node
-            int h = ID(i, j);
+        cnt++;
+        // if (cnt % 100 == 0) std::shuffle(indexes.begin(), indexes.end(), g);
 
-            for (int v = 0; v < n; ++v)
-              for (int w = 0; w < n; ++w) {
-                int c_vw = (i - v) * (i - v) + (w - j) * (w - j);
-                int violation = c_vw - pi[h] + pi[n * n + ID(v, w)];
-                if (violation < best_v) {
-                  best_v = violation;
-                  best_c = c_vw;
-                  best_n = n * n + ID(v, w);
-                }
-              }
+        // Solve separation problem:
+        int block = G.m / NUM_BLOCKS;
 
-            // Store most violated cuts for element i
-            vars[h].b = best_n;
-            vars[h].c = best_c;
+        // TODO: I can try a thread pool instead OMP
+#pragma omp parallel for
+        for (int b = 0; b < NUM_BLOCKS; ++b) {
+          int best_e = 0;
+          int best_v = 0;
+          int best_c = std::numeric_limits<int>::max();
+
+          for (int e = b * block, e_max = std::min<int>(G.m, (b + 1) * block);
+               e < e_max; ++e) {
+            int f = indexes[e];
+            int violation = G.cost[f] - pi[G.head[f]] + pi[G.tail[f]];
+            if (violation < best_v ||
+                (violation == best_v && G.cost[f] < best_c)) {
+              best_e = f;
+              best_v = violation;
+              best_c = G.cost[f];
+              if (violation < 0) break;
+            }
           }
+
+          // Store most violated cuts for element i
+          if (best_v < 0) {
+            vars[b].a = G.head[best_e];
+            vars[b].b = G.tail[best_e];
+            vars[b].c = G.cost[best_e];
+          } else
+            vars[b].c = -1;
+        }
 
         // Take all negative reduced cost variables
         vnew.clear();
-        for (auto &v : vars) {
-          if (v.c > -1) vnew.push_back(v);
-          v.c = -1;
+        for (int i = 0; i < NUM_BLOCKS; i++) {
+          if (vars[i].c > -1) vnew.push_back(vars[i]);
+          vars[i].c = -1;
         }
 
         if (vnew.empty()) break;
 
-        std::sort(vnew.begin(), vnew.end(),
-                  [](const Var &v, const Var &w) { return v.c > w.c; });
+        // std::sort(vnew.begin(), vnew.end(),
+        //          [](const Var &v, const Var &w) { return v.c < w.c; });
 
         // Replace old constraints with new ones
         int new_arcs = simplex.updateArcs(vnew);

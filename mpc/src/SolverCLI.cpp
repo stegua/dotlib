@@ -375,7 +375,8 @@ int main(int argc, char *argv[]) {
     std::string SEP = "\\";
 
     std::string base = "C:\\Users\\Gualandi\\Data\\ColorTransfer";
-    std::vector<std::string> Fs = {"color-512-seed-13.net"};
+    // std::vector<std::string> Fs = {"color-512-seed-13.net"};
+    std::vector<std::string> Fs = {"color-4096.net"};
     DOT::Solver solver;
 
     // Profiling algorithms
@@ -400,6 +401,7 @@ int main(int argc, char *argv[]) {
       // eati[3] += times[3];
       // stat[2] += times[0];
 
+      stat[1] = solver.solveDimacs("colgen");
       stat[1] = solver.solveDimacs("bipartiteEapi");
       stat[1] = solver.solveDimacs("bipartiteEati");
       // eapi[0] += times[0];
