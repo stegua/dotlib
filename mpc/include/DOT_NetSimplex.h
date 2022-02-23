@@ -35,7 +35,7 @@ namespace DOT {
 static void eati_search(int e, int e_max, const int *state, const int *cost,
                         const int *pi, const int *source, const int *target,
                         int *min, int *in_arc) {
-  min[0] = 0;
+  // min[0] = 0;
   for (int i = e; i < e_max; ++i) {
     int c = state[i] * (cost[i] + pi[source[i]] - pi[target[i]]);
     if (c < min[0]) {
@@ -46,7 +46,7 @@ static void eati_search(int e, int e_max, const int *state, const int *cost,
 }
 
 class NetSimplex {
-public:
+ public:
   typedef std::vector<int> IntVector;
   typedef std::vector<int> ValueVector;
   typedef std::vector<int> CostVector;
@@ -66,7 +66,7 @@ public:
   int _node_num;
   int _arc_num;
 
-  int _dummy_arc; // Arc id where begin the basic arcs
+  int _dummy_arc;  // Arc id where begin the basic arcs
   int _next_arc;
 
   // Parameters of the problem
@@ -121,10 +121,10 @@ public:
   const int MIN_BLOCK_SIZE = 20;
   int _block_size;
 
-private:
+ private:
   // Implementation of the Block Search pivot rule
   class BlockSearchPivotRule {
-  private:
+   private:
     // References to the NetworkSimplex class
     const IntVector &_source;
     const IntVector &_target;
@@ -142,13 +142,19 @@ private:
     // Negative eps
     const int negeps;
 
-  public:
+   public:
     // Constructor
     BlockSearchPivotRule(NetSimplex &ns)
-        : _source(ns._source), _target(ns._target), _cost(ns._cost),
-          _state(ns._state), _pi(ns._pi), _in_arc(ns.in_arc),
-          _arc_num(ns._arc_num), _dummy_arc(ns._dummy_arc),
-          _next_arc(ns._next_arc), negeps(ns._opt_tolerance) {
+        : _source(ns._source),
+          _target(ns._target),
+          _cost(ns._cost),
+          _state(ns._state),
+          _pi(ns._pi),
+          _in_arc(ns.in_arc),
+          _arc_num(ns._arc_num),
+          _dummy_arc(ns._dummy_arc),
+          _next_arc(ns._next_arc),
+          negeps(ns._opt_tolerance) {
       // The main parameters of the pivot rule
       const double BLOCK_SIZE_FACTOR = 4;
       const int MIN_BLOCK_SIZE = 20;
@@ -162,7 +168,7 @@ private:
 
     // Find next entering arc
     bool findEnteringArc() {
-      int min = 0;
+      int min = negeps;
       int e = _next_arc;
       int M = _arc_num;
       int M0 = _dummy_arc;
@@ -172,7 +178,7 @@ private:
         eati_search(e, e_max, &_state[0], &_cost[0], &_pi[0], &_source[0],
                     &_target[0], &min, &_in_arc);
 
-        if (min < 0) {
+        if (min < negeps) {
           _next_arc = _in_arc;
           return true;
         }
@@ -188,7 +194,7 @@ private:
         eati_search(e, e_max, &_state[0], &_cost[0], &_pi[0], &_source[0],
                     &_target[0], &min, &_in_arc);
 
-        if (min < 0) {
+        if (min < negeps) {
           _next_arc = _in_arc;
           return true;
         }
@@ -237,12 +243,19 @@ private:
     //  _next_arc = _in_arc;
     //  return true;
 
-  }; // class BlockSearchPivotRule
+  };  // class BlockSearchPivotRule
 
-public:
+ public:
   NetSimplex(const char INIT, int node_num, int arc_num)
-      : _node_num(node_num), _arc_num(0), _root(-1), in_arc(-1), join(-1),
-        u_in(-1), v_in(-1), u_out(-1), v_out(-1),
+      : _node_num(node_num),
+        _arc_num(0),
+        _root(-1),
+        in_arc(-1),
+        join(-1),
+        u_in(-1),
+        v_in(-1),
+        u_out(-1),
+        v_out(-1),
         MAX((std::numeric_limits<int>::max)()),
         INF(std::numeric_limits<int>::has_infinity
                 ? std::numeric_limits<int>::infinity()
@@ -261,21 +274,21 @@ public:
     _supply.resize(all_node_num, 0);
     _pi.resize(all_node_num);
 
-    _parent.resize(all_node_num);     // Parent
-    _pred.resize(all_node_num);       // Predecessor N -> E
-    _pred_dir.resize(all_node_num);   // Predecessor direction N -> {-1,1}
-    _thread.resize(all_node_num);     // Depth-first order for visiting the tree
-    _rev_thread.resize(all_node_num); // Reverse thread (?)
-    _succ_num.resize(all_node_num);   // Number of successors?
-    _last_succ.resize(all_node_num);  // Last successor?
+    _parent.resize(all_node_num);    // Parent
+    _pred.resize(all_node_num);      // Predecessor N -> E
+    _pred_dir.resize(all_node_num);  // Predecessor direction N -> {-1,1}
+    _thread.resize(all_node_num);    // Depth-first order for visiting the tree
+    _rev_thread.resize(all_node_num);  // Reverse thread (?)
+    _succ_num.resize(all_node_num);    // Number of successors?
+    _last_succ.resize(all_node_num);   // Last successor?
 
     // 2*n arcs from nodes to root and from root to node;
     // 2*n-1 nodes in a basic solution
     int max_arc_num = 0;
-    if (INIT == 'F') // Full
+    if (INIT == 'F')  // Full
       max_arc_num = 2 * _node_num + arc_num + 1;
 
-    if (INIT == 'E') // Empty, for Column Generation
+    if (INIT == 'E')  // Empty, for Column Generation
       max_arc_num = 4 * _node_num + 1;
 
     _source.reserve(max_arc_num);
@@ -298,7 +311,7 @@ public:
     _next_arc = _dummy_arc;
 
     // Interal parameters
-    N_IT_LOG = 1000; // check runtime every IT_LOG iterations
+    N_IT_LOG = 1000;  // check runtime every IT_LOG iterations
     _timelimit = std::numeric_limits<double>::max();
     _verbosity = DOT_VAL_INFO;
     _opt_tolerance = 0;
@@ -313,17 +326,34 @@ public:
   }
 
   NetSimplex(const NetSimplex &o)
-      : _source(o._source), _target(o._target),
+      : _source(o._source),
+        _target(o._target),
         _supply(o._supply.begin(), o._supply.end()),
         _flow(o._flow.begin(), o._flow.end()),
-        _cost(o._cost.begin(), o._cost.end()), _pi(o._pi.begin(), o._pi.end()),
-        _parent(o._parent), _pred(o._pred), _thread(o._thread),
-        _rev_thread(o._rev_thread), _succ_num(o._succ_num),
-        _last_succ(o._last_succ), _pred_dir(o._pred_dir), _state(o._state),
-        _dirty_revs(o._dirty_revs), _dummy_arc(o._dummy_arc),
-        _next_arc(o._dummy_arc), _node_num(o._node_num), _arc_num(o._arc_num),
-        _root(o._root), in_arc(o.in_arc), join(o.join), u_in(o.u_in),
-        v_in(o.v_in), u_out(o.u_out), v_out(o.v_out), MAX(o.MAX), INF(o.INF),
+        _cost(o._cost.begin(), o._cost.end()),
+        _pi(o._pi.begin(), o._pi.end()),
+        _parent(o._parent),
+        _pred(o._pred),
+        _thread(o._thread),
+        _rev_thread(o._rev_thread),
+        _succ_num(o._succ_num),
+        _last_succ(o._last_succ),
+        _pred_dir(o._pred_dir),
+        _state(o._state),
+        _dirty_revs(o._dirty_revs),
+        _dummy_arc(o._dummy_arc),
+        _next_arc(o._dummy_arc),
+        _node_num(o._node_num),
+        _arc_num(o._arc_num),
+        _root(o._root),
+        in_arc(o.in_arc),
+        join(o.join),
+        u_in(o.u_in),
+        v_in(o.v_in),
+        u_out(o.u_out),
+        v_out(o.v_out),
+        MAX(o.MAX),
+        INF(o.INF),
         _runtime(o._runtime) {}
 
   ProblemType run(PivotRule pivot_rule = PivotRule::BLOCK_SEARCH) {
@@ -337,8 +367,7 @@ public:
       _flow[e] = 0;
     }
 
-    if (!init())
-      return ProblemType::INFEASIBLE;
+    if (!init()) return ProblemType::INFEASIBLE;
     return start(pivot_rule);
   }
 
@@ -378,14 +407,12 @@ public:
 
   // Manage dummy flow
   void updateArcs(const vector<size_t> &as, int value) {
-    for (const auto e : as)
-      _cost[e] = value;
+    for (const auto e : as) _cost[e] = value;
   }
 
   int64_t computeDummyFlow(const vector<size_t> &as) const {
     int64_t tot_flow = 0;
-    for (const auto e : as)
-      tot_flow += _flow[e];
+    for (const auto e : as) tot_flow += _flow[e];
     return tot_flow;
   }
 
@@ -408,20 +435,17 @@ public:
           break;
         ++e;
       }
-      if (e >= e_max)
-        break;
+      if (e >= e_max) break;
       _source[e] = as[idx].a;
       _target[e] = as[idx].b;
       _cost[e] = as[idx].c;
-      if (new_arc == 0)
-        _next_arc = e;
+      if (new_arc == 0) _next_arc = e;
       new_arc++;
     }
 
     for (; idx < idx_max; ++idx) {
       addArc(as[idx].a, as[idx].b, as[idx].c);
-      if (new_arc == 0)
-        _next_arc = e;
+      if (new_arc == 0) _next_arc = e;
       new_arc++;
     }
 
@@ -435,8 +459,7 @@ public:
 
     for (; idx < idx_max; ++idx) {
       addArc(as[idx].a, as[idx].b, as[idx].c);
-      if (new_arc == 0)
-        _next_arc = _arc_num;
+      if (new_arc == 0) _next_arc = _arc_num;
       new_arc++;
     }
 
@@ -446,8 +469,7 @@ public:
   double totalCost() const {
     double c = 0;
     for (int e = _dummy_arc; e < _arc_num; ++e)
-      if (_source[e] != _root && _target[e] != _root)
-        c += _flow[e] * _cost[e];
+      if (_source[e] != _root && _target[e] != _root) c += _flow[e] * _cost[e];
 
     return c;
   }
@@ -455,8 +477,7 @@ public:
   int64_t totalFlow() const {
     int64_t tot_flow = 0;
     for (int e = _dummy_arc; e < _arc_num; ++e)
-      if (_source[e] != _root && _target[e] != _root)
-        tot_flow += _flow[e];
+      if (_source[e] != _root && _target[e] != _root) tot_flow += _flow[e];
 
     return tot_flow;
   }
@@ -464,8 +485,7 @@ public:
   int64_t dummyFlow() const {
     int64_t tot_flow = 0;
     for (int e = 0; e < _dummy_arc; ++e)
-      if (_source[e] == _root)
-        tot_flow += _flow[e];
+      if (_source[e] == _root) tot_flow += _flow[e];
 
     return tot_flow;
   }
@@ -517,12 +537,9 @@ public:
   }
   void setVerbosity(std::string v) {
     _verbosity = v;
-    if (v == DOT_VAL_DEBUG)
-      N_IT_LOG = 100000;
-    if (v == DOT_VAL_INFO)
-      N_IT_LOG = 10000000;
-    if (v == DOT_VAL_SILENT)
-      N_IT_LOG = 0;
+    if (v == DOT_VAL_DEBUG) N_IT_LOG = 100000;
+    if (v == DOT_VAL_INFO) N_IT_LOG = 10000000;
+    if (v == DOT_VAL_SILENT) N_IT_LOG = 0;
     //    PRINT("INFO: change <verbosity> to %s\n", v.c_str());
   }
 
@@ -558,16 +575,14 @@ public:
     _state.resize(o + s, STATE_LOWER);
   }
 
-private:
+ private:
   // Initialize internal data structures
   bool init() {
-    if (_node_num == 0)
-      return false;
+    if (_node_num == 0) return false;
 
     // Check the sum of supply values
     _sum_supply = 0;
-    for (int i = 0; i != _node_num; ++i)
-      _sum_supply += _supply[i];
+    for (int i = 0; i != _node_num; ++i) _sum_supply += _supply[i];
 
     // Initialize artifical cost
     int ART_COST;
@@ -576,8 +591,7 @@ private:
     } else {
       ART_COST = 0;
       for (int i = _dummy_arc; i != _arc_num; ++i) {
-        if (_cost[i] > ART_COST)
-          ART_COST = _cost[i];
+        if (_cost[i] > ART_COST) ART_COST = _cost[i];
       }
       ART_COST = (ART_COST + 1) * _node_num;
     }
@@ -622,8 +636,7 @@ private:
   }
 
   bool pricing() {
-
-    int min = 0;
+    int min = _opt_tolerance;
     int e = _next_arc;
     int M = _arc_num;
     int M0 = _dummy_arc;
@@ -633,7 +646,7 @@ private:
       para_search(e, e_max, &_state[0], &_cost[0], &_pi[0], &_source[0],
                   &_target[0], &min, &in_arc);
 
-      if (min < 0) {
+      if (min < _opt_tolerance) {
         _next_arc = in_arc;
         return true;
       }
@@ -649,7 +662,7 @@ private:
       para_search(e, e_max, &_state[0], &_cost[0], &_pi[0], &_source[0],
                   &_target[0], &min, &in_arc);
 
-      if (min < 0) {
+      if (min < _opt_tolerance) {
         _next_arc = in_arc;
         return true;
       }
@@ -693,8 +706,7 @@ private:
     for (int u = first; u != join; u = _parent[u]) {
       e = _pred[u];
       d = _flow[e];
-      if (_pred_dir[u] == DIR_DOWN)
-        d = INF - d;
+      if (_pred_dir[u] == DIR_DOWN) d = INF - d;
 
       if (d < delta) {
         delta = d;
@@ -707,8 +719,7 @@ private:
     for (int u = second; u != join; u = _parent[u]) {
       e = _pred[u];
       d = _flow[e];
-      if (_pred_dir[u] == DIR_UP)
-        d = INF - d;
+      if (_pred_dir[u] == DIR_UP) d = INF - d;
 
       if (d <= delta) {
         delta = d;
@@ -789,10 +800,10 @@ private:
 
       // Update _thread and _parent along the stem nodes (i.e. the nodes
       // between u_in and u_out, whose parent have to be changed)
-      int stem = u_in;             // the current stem node
-      int par_stem = v_in;         // the new parent of stem
-      int next_stem;               // the next stem node
-      int last = _last_succ[u_in]; // the last successor of stem
+      int stem = u_in;              // the current stem node
+      int par_stem = v_in;          // the new parent of stem
+      int next_stem;                // the next stem node
+      int last = _last_succ[u_in];  // the last successor of stem
       int before, after = _thread[last];
       _thread[v_in] = u_in;
       _dirty_revs.clear();
@@ -887,21 +898,21 @@ private:
     int end = _thread[_last_succ[u_in]];
 
     if (sigma != 0)
-      for (int u = u_in; u != end; u = _thread[u])
-        _pi[u] += sigma;
+      for (int u = u_in; u != end; u = _thread[u]) _pi[u] += sigma;
   }
 
   // Execute the algorithm
   ProblemType start(PivotRule pivot_rule) {
     // Select the pivot rule implementation
     switch (pivot_rule) {
-    case PivotRule::BLOCK_SEARCH:
-      return start<BlockSearchPivotRule>();
+      case PivotRule::BLOCK_SEARCH:
+        return start<BlockSearchPivotRule>();
     }
-    return ProblemType::INFEASIBLE; // avoid warning
+    return ProblemType::INFEASIBLE;  // avoid warning
   }
 
-  template <typename PivotRuleImpl> ProblemType start() {
+  template <typename PivotRuleImpl>
+  ProblemType start() {
     auto start_tt = std::chrono::steady_clock::now();
     PivotRuleImpl pivot(*this);
 
@@ -922,8 +933,7 @@ private:
                      .count()) /
           1000000000;
 
-      if (!stop)
-        break;
+      if (!stop) break;
 
       // start_t = std::chrono::steady_clock::now();
       findJoinNode();
@@ -997,12 +1007,13 @@ private:
                 1000;
 
     if (_verbosity == DOT_VAL_DEBUG)
-      PRINT("NetSIMPLEX outer loop | enter: %.3f, join: %.3f, leave: %.3f, "
-            "change: %.3f, tree: %.3f, "
-            "potential: %.3f, runtime: %.3f\n",
-            t1, t2, t3, t4, t5, t6, _runtime);
+      PRINT(
+          "NetSIMPLEX outer loop | enter: %.3f, join: %.3f, leave: %.3f, "
+          "change: %.3f, tree: %.3f, "
+          "potential: %.3f, runtime: %.3f\n",
+          t1, t2, t3, t4, t5, t6, _runtime);
 
     return ProblemType::OPTIMAL;
   }
 };
-} // namespace DOT
+}  // namespace DOT

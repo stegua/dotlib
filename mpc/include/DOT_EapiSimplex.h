@@ -109,7 +109,7 @@ static void para3_search(int e, int e_max, const int32_t *state,
 static void para_search(int e, int e_max, const int *state, const int *cost,
                         const int *pi, const int *source, const int *target,
                         int *min, int *in_arc) {
-  min[0] = 0;
+  // min[0] = 0;
   for (int i = e; i < e_max; ++i) {
     int c = state[i] * (cost[i] + pi[source[i]] - pi[target[i]]);
     if (c < min[0]) {

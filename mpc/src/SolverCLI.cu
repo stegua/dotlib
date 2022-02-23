@@ -379,7 +379,17 @@ int main(int argc, char *argv[]) {
     std::string SEP = "\\";
 
     std::string base = "C:\\Users\\Gualandi\\Data\\ColorTransfer";
-    std::vector<std::string> Fs = {"color-512-seed-13.net"};
+    std::vector<std::string> Fs = {
+        "color-5120-seed-13.net", "color-5120-seed-17.net",
+        "color-5120-seed-19.net", "color-4608-seed-13.net",
+        "color-4608-seed-17.net", "color-4608-seed-19.net",
+        "color-4096-seed-13.net", "color-4096-seed-17.net",
+        "color-4096-seed-19.net", "color-3584-seed-13.net",
+        "color-3584-seed-17.net", "color-3584-seed-19.net",
+        "color-3072-seed-13.net", "color-3072-seed-17.net",
+        "color-3072-seed-19.net",
+    };
+
     // std::vector<std::string> Fs = {"color-4096.net"};
     DOT::Solver solver;
 
@@ -397,13 +407,9 @@ int main(int argc, char *argv[]) {
 #endif
 
     for (const auto &filename : Fs) {
-      fprintf(stdout, "Step 1\n");
       fflush(stdout);
 
       solver.parseDimacs(base + SEP + filename);
-
-      fprintf(stdout, "Step 2\n");
-      fflush(stdout);
 
       // std::array<double, 4> times = solver.solveDimacs("bipartiteEapi");
 
@@ -413,20 +419,20 @@ int main(int argc, char *argv[]) {
       // eati[3] += times[3];
       // stat[2] += times[0];
 
-#ifdef __MY_CUDA
-      stat[1] = solver.solveDimacs("colgen_cuda");
-#endif
+      //#ifdef __MY_CUDA
+      stat[1] = solver.solveDimacs("colgen_cuda", "CUDA");
+      //#endif
 
-      stat[1] = solver.solveDimacs("colgen");
-      stat[1] = solver.solveDimacs("bipartiteEapi");
-      stat[1] = solver.solveDimacs("bipartiteEati");
+      // stat[1] = solver.solveDimacs("colgen");
+      stat[1] = solver.solveDimacs("bipartiteEapi", "EAPI");
+      stat[1] = solver.solveDimacs("bipartiteEati", "EATI");
       // eapi[0] += times[0];
       // eapi[1] += times[1];
       // eapi[2] += times[2];
       // eapi[3] += times[3];
       // stat[1] += times[0];
 
-      stat[0] += solver.solveDimacs("netcplex");
+      stat[0] += solver.solveDimacs("netcplex", "PLEX");
 
       // stat[3] += solver.solverDimacs("colgen");
     }

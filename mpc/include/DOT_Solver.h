@@ -21,6 +21,189 @@
 
 const double SCALE = 10000.0;
 
+// Zeta block for coordinates vector
+#define BLOCKSIZE 1024
+
+// Taken from:
+#define CHECK(call)                                          \
+  {                                                          \
+    const cudaError_t error = call;                          \
+    if (error != cudaSuccess) {                              \
+      fprintf(stderr, "Error: %s:%d, ", __FILE__, __LINE__); \
+      fprintf(stderr, "code: %d, reason: %s\n", error,       \
+              cudaGetErrorString(error));                    \
+      exit(1);                                               \
+    }                                                        \
+  }
+//---------------------------------------------------------------------------------------
+__device__ void warpReduce(volatile int *vme1, volatile int *vme2, int tid) {
+  if (vme1[tid] > vme1[tid + 32]) {
+    vme1[tid] = vme1[tid + 32];
+    vme2[tid] = vme2[tid + 32];
+  }
+  if (vme1[tid] > vme1[tid + 16]) {
+    vme1[tid] = vme1[tid + 16];
+    vme2[tid] = vme2[tid + 16];
+  }
+  if (vme1[tid] > vme1[tid + 8]) {
+    vme1[tid] = vme1[tid + 8];
+    vme2[tid] = vme2[tid + 8];
+  }
+  if (vme1[tid] > vme1[tid + 4]) {
+    vme1[tid] = vme1[tid + 4];
+    vme2[tid] = vme2[tid + 4];
+  }
+  if (vme1[tid] > vme1[tid + 2]) {
+    vme1[tid] = vme1[tid + 2];
+    vme2[tid] = vme2[tid + 2];
+  }
+  if (vme1[tid] > vme1[tid + 1]) {
+    vme1[tid] = vme1[tid + 1];
+    vme2[tid] = vme2[tid + 1];
+  }
+}
+
+//---------------------------------------------------------------------------------------
+__global__ void fullPricingUnroll8(int M, int *d_cost, int *d_head, int *d_tail,
+                                   int *d_PI, int *d_Var, int mmin) {
+  __shared__ int viol[BLOCKSIZE];
+  __shared__ int best_e[BLOCKSIZE];
+
+  // set thread ID
+  int tid = threadIdx.x;
+  int gridSize = blockIdx.x * blockDim.x * 8;
+  int idx = gridSize + tid;
+
+  int e = idx;
+
+  viol[tid] = mmin;
+
+  if (idx + 7 * blockDim.x < M) {
+    for (int i = 0; i < 8; i++) {
+      e = idx + i * blockDim.x;
+      int tmp = d_cost[e] - d_PI[d_head[e]] + d_PI[d_tail[e]];
+      if (tmp < viol[tid]) {
+        viol[tid] = tmp;
+        best_e[tid] = e;
+      }
+    }
+  }
+
+  // synchronize within block
+  __syncthreads();
+
+  // in-place reduction in global memory
+  if (tid < 512) {
+    if (viol[tid] > viol[tid + 512]) {
+      viol[tid] = viol[tid + 512];
+      best_e[tid] = best_e[tid + 512];
+    }
+  }
+  __syncthreads();
+  if (tid < 256) {
+    if (viol[tid] > viol[tid + 256]) {
+      viol[tid] = viol[tid + 256];
+      best_e[tid] = best_e[tid + 256];
+    }
+  }
+  __syncthreads();
+  if (tid < 128) {
+    if (viol[tid] > viol[tid + 128]) {
+      viol[tid] = viol[tid + 128];
+      best_e[tid] = best_e[tid + 128];
+    }
+  }
+  __syncthreads();
+  if (tid < 64) {
+    if (viol[tid] > viol[tid + 64]) {
+      viol[tid] = viol[tid + 64];
+      best_e[tid] = best_e[tid + 64];
+    }
+  }
+  __syncthreads();
+
+  // unrolling warp
+  if (tid < 32) {
+    warpReduce(viol, best_e, tid);
+    // write result for this block to global mem
+    if (tid == 0) {
+      int idx = blockIdx.x;
+      d_Var[idx] = -1;
+      if (viol[tid] < mmin) d_Var[idx] = best_e[tid];
+    }
+  }
+}
+
+__global__ void fullPricingUnroll88(int M1, int M2, int *d_cost, int *d_head,
+                                    int *d_tail, int *d_PI, int *d_Var,
+                                    int mmin) {
+  __shared__ int viol[BLOCKSIZE];
+  __shared__ int best_e[BLOCKSIZE];
+
+  // set thread ID
+  int tid = threadIdx.x;
+  int gridSize = blockIdx.x * blockDim.x * 8;
+  int idx = M1 + gridSize + tid;
+
+  int e = idx;
+
+  viol[tid] = mmin;
+
+  if (idx + 7 * blockDim.x < M2) {
+    for (int i = 0; i < 8; i++) {
+      e = idx + i * blockDim.x;
+      int tmp = d_cost[e] - d_PI[d_head[e]] + d_PI[d_tail[e]];
+      if (tmp < viol[tid]) {
+        viol[tid] = tmp;
+        best_e[tid] = e;
+      }
+    }
+  }
+
+  // synchronize within block
+  __syncthreads();
+
+  // in-place reduction in global memory
+  if (tid < 512) {
+    if (viol[tid] > viol[tid + 512]) {
+      viol[tid] = viol[tid + 512];
+      best_e[tid] = best_e[tid + 512];
+    }
+  }
+  __syncthreads();
+  if (tid < 256) {
+    if (viol[tid] > viol[tid + 256]) {
+      viol[tid] = viol[tid + 256];
+      best_e[tid] = best_e[tid + 256];
+    }
+  }
+  __syncthreads();
+  if (tid < 128) {
+    if (viol[tid] > viol[tid + 128]) {
+      viol[tid] = viol[tid + 128];
+      best_e[tid] = best_e[tid + 128];
+    }
+  }
+  __syncthreads();
+  if (tid < 64) {
+    if (viol[tid] > viol[tid + 64]) {
+      viol[tid] = viol[tid + 64];
+      best_e[tid] = best_e[tid + 64];
+    }
+  }
+  __syncthreads();
+
+  // unrolling warp
+  if (tid < 32) {
+    warpReduce(viol, best_e, tid);
+    // write result for this block to global mem
+    if (tid == 0) {
+      int idx = blockIdx.x;
+      d_Var[idx] = -1;
+      if (viol[tid] < mmin) d_Var[idx] = best_e[tid];
+    }
+  }
+}
 class graph_t {
  public:
   ~graph_t(void) { free(data); }
@@ -875,6 +1058,168 @@ class Solver {
 
   //--------------------------------------------------------------------------
   double solveDimacs(const std::string &filename, const std::string &msg = "") {
+    //#ifdef __MY_CUDA
+    if (filename == "colgen_cuda") {
+      auto start_t = std::chrono::steady_clock::now();
+
+      int N = G.n;
+
+      // Dual multipliers
+      size_t Nm = G.m * sizeof(int);
+      int *d_cost;
+      int *d_head;
+      int *d_tail;
+      cudaMalloc((void **)&d_cost, Nm);
+      cudaMalloc((void **)&d_head, Nm);
+      cudaMalloc((void **)&d_tail, Nm);
+
+      // Copy once for all
+      CHECK(cudaMemcpy(d_cost, G.cost, Nm, cudaMemcpyHostToDevice));
+      CHECK(cudaMemcpy(d_head, G.head, Nm, cudaMemcpyHostToDevice));
+      CHECK(cudaMemcpy(d_tail, G.tail, Nm, cudaMemcpyHostToDevice));
+
+      // Size for dual variables
+      size_t Npi = N * sizeof(int);
+      int *h_PI;
+      int *d_PI;
+      CHECK(cudaMallocHost((void **)&h_PI, Npi));
+      CHECK(cudaMalloc((void **)&d_PI, Npi));
+
+      // Negative reduced cost variables
+      int threads_per_block = 1024;
+      int number_of_blocks =
+          ((G.m + threads_per_block - 1) / threads_per_block) / 8;
+      fprintf(stdout, "blocks=%d, threadsXblock=%d\n", number_of_blocks,
+              threads_per_block);
+      fflush(stdout);
+
+      size_t Nvar = number_of_blocks * sizeof(int);
+      int *h_Var;
+      int *d_Var;
+      CHECK(cudaMallocHost((void **)&h_Var, Nvar));
+      CHECK(cudaMalloc((void **)&d_Var, Nvar));
+
+      Vars vnew;
+      vnew.reserve(number_of_blocks);
+
+#// Build the graph for min cost flow
+      NetSimplex simplex('E', G.n, 0);
+
+      // Set the parameters
+      simplex.setTimelimit(timelimit);
+      simplex.setVerbosity(verbosity);
+      int viol = 0;
+      // 4096 * 4;
+      simplex.setOptTolerance(-viol);
+
+      // add first d source nodes
+      for (int i = 0; i < G.n; ++i) simplex.addNode(i, G.getSupply(i));
+
+      // Init the simplex
+      _status = simplex.run();
+
+      const int BB = 16;
+
+      int subblock = G.m / BB;
+      int B0 = 0, B1 = 0, B2 = 0;
+      B2 = std::min(B1 + subblock, G.m);
+      size_t Bvar = number_of_blocks / BB * sizeof(int);
+
+      while (_status != ProblemType::TIMELIMIT) {
+        // Take the dual values
+        for (int j = 0; j < N; ++j) h_PI[j] = -simplex.potential(j);
+
+        CHECK(cudaMemcpy(d_PI, h_PI, Npi, cudaMemcpyHostToDevice));
+
+        B0 = B1;
+        int itit = 0;
+        while (true) {
+          fullPricingUnroll88<<<number_of_blocks / BB, threads_per_block>>>(
+              B1, B2, d_cost, d_head, d_tail, d_PI, d_Var, -viol);
+
+          CHECK(cudaMemcpy(h_Var, d_Var, Bvar, cudaMemcpyDeviceToHost));
+
+          // Take all negative reduced cost variables
+          vnew.clear();
+          for (int h = 0, h_max = number_of_blocks / BB; h < h_max; ++h)
+            if (h_Var[h] > -1)
+              vnew.emplace_back(G.head[h_Var[h]], G.tail[h_Var[h]],
+                                G.cost[h_Var[h]]);
+
+          if (vnew.empty()) {
+            B1 = (B1 + subblock);
+            if (B1 == G.m) B1 = 0;
+            if (B1 == B0) break;
+            B2 = std::min(B1 + subblock, G.m);
+          } else {
+            B1 = (B1 + subblock);
+            if (B1 == G.m) B1 = 0;
+            B2 = std::min(B1 + subblock, G.m);
+            break;
+          }
+        }
+        if (vnew.empty()) break;
+
+        int new_arcs = simplex.updateArcs(vnew);
+        _status = simplex.reRun();
+
+        // if (vnew.empty()) {
+        //  if (viol == 0) {
+
+        //  }
+        //  if (viol > 1) {
+        //    viol = viol >> 1;
+        //    // double tt =
+        //    // double(std::chrono::duration_cast<std::chrono::milliseconds>(
+        //    //               std::chrono::steady_clock::now() - start_t)
+        //    //               .count()) /
+        //    //    1000;
+        //    // fprintf(stdout, "min viol: %d, cost: %f, time: %f\n", viol,
+        //    //        (double)simplex.totalCost() / double(G.n), tt);
+        //  } else
+        //    viol = 0;
+        //  simplex.setOptTolerance(-viol);
+        //}
+
+        // std::sort(vnew.begin(), vnew.end(),
+        //          [](const Var &v, const Var &w) { return v.c > w.c; });
+
+        // Replace old constraints with new ones
+        // int new_arcs = simplex.updateArcs(vnew);
+
+        //_status = simplex.reRun();
+      }
+
+      double fobj = (double)simplex.totalCost() / double(G.n);
+
+      _iterations = (int)simplex.iterations();
+      _runtime = simplex.runtime();
+      _num_arcs = simplex.num_arcs();
+
+      auto end_t = std::chrono::steady_clock::now();
+      auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                             end_t - start_t)
+                             .count()) /
+                  1000;
+
+      PRINT(
+          "CUDALGEN %s it %d UB %.6f runtime %.4f simplex %.4f "
+          "num_arcs %d blocks %d\n",
+          msg.c_str(), (int)_iterations, fobj, _all, _runtime, (int)_num_arcs,
+          number_of_blocks);
+
+      cudaFree(d_cost);
+      cudaFree(d_head);
+      cudaFree(d_tail);
+      cudaFree(h_PI);
+      cudaFree(d_PI);
+      cudaFree(h_Var);
+      cudaFree(d_Var);
+
+      return _all;
+    }
+    //#endif
+
     if (filename == "colgen") {
       auto start_t = std::chrono::steady_clock::now();
 
@@ -906,9 +1251,6 @@ class Solver {
       // add first d source nodes
       for (int i = 0; i < G.n; ++i) simplex.addNode(i, G.getSupply(i));
 
-      // for (int e = 0; e < G.m; ++e)
-      //  simplex.addArc(G.head[e], G.tail[e], G.cost[e]);
-
       // Init the simplex
       _status = simplex.run();
 
@@ -917,7 +1259,9 @@ class Solver {
       std::iota(indexes.begin(), indexes.end(), 0);
       std::random_device rd;
       std::mt19937 g(rd());
-      // std::shuffle(indexes.begin(), indexes.end(), g);
+
+      // Solve separation problem:
+      int block = G.m / NUM_BLOCKS;
 
       int cnt = 0;
       while (_status != ProblemType::TIMELIMIT) {
@@ -925,10 +1269,6 @@ class Solver {
         for (int j = 0; j < N; ++j) pi[j] = -simplex.potential(j);
 
         cnt++;
-        // if (cnt % 100 == 0) std::shuffle(indexes.begin(), indexes.end(), g);
-
-        // Solve separation problem:
-        int block = G.m / NUM_BLOCKS;
 
         // TODO: I can try a thread pool instead OMP
 #pragma omp parallel for
@@ -939,14 +1279,13 @@ class Solver {
 
           for (int e = b * block, e_max = std::min<int>(G.m, (b + 1) * block);
                e < e_max; ++e) {
-            int f = indexes[e];
-            int violation = G.cost[f] - pi[G.head[f]] + pi[G.tail[f]];
+            int violation = G.cost[e] - pi[G.head[e]] + pi[G.tail[e]];
             if (violation < best_v ||
-                (violation == best_v && G.cost[f] < best_c)) {
-              best_e = f;
+                (violation == best_v && G.cost[e] < best_c)) {
+              best_e = e;
               best_v = violation;
-              best_c = G.cost[f];
-              if (violation < 0) break;
+              best_c = G.cost[e];
+              if (best_v < 0) break;
             }
           }
 
