@@ -37,5 +37,17 @@
     <ClInclude Include="..\..\..\include\network_simplex.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_Cuda.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_Lemon.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_Cplex.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_CoinLemon.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

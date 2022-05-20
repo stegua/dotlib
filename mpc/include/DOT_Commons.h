@@ -6,19 +6,17 @@
  *
  */
 
-
 #pragma once
 
-#include <chrono>
-#include <exception>
-#include <limits>
-#include <string>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <exception>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <sstream>
-
+#include <string>
 #include <vector>
 using std::vector;
 
@@ -39,25 +37,25 @@ using std::unordered_set;
 #define PRINT Rprintf
 #else
 #define PRINT printf
-#endif // MY_RCPP
+#endif  // MY_RCPP
 
 #ifndef __GCD_
 #define __GCD_
 int GCD(int _a, int _b) {
-	int a = (_a >= 0 ? _a : -_a);
-	int b = (_b >= 0 ? _b : -_b);
-	while (b != 0) {
-		int t = b;
-		b = a % b;
-		a = t;
-	}
-	return a;
+  int a = (_a >= 0 ? _a : -_a);
+  int b = (_b >= 0 ? _b : -_b);
+  while (b != 0) {
+    int t = b;
+    b = a % b;
+    a = t;
+  }
+  return a;
 }
 #endif
 
 void tolower(std::string& data) {
-	std::transform(data.begin(), data.end(), data.begin(),
-		[](unsigned char c) { return std::tolower(c); });
+  std::transform(data.begin(), data.end(), data.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
 }
 
 // List of solver parameters:
@@ -91,26 +89,62 @@ constexpr auto DOT_PAR_RECODE = "Recode";
 
 // NAME SPACE
 namespace DOT {
-	enum class ProblemType {
-		INFEASIBLE = 0,
-		OPTIMAL = 1,
-		UNBOUNDED = 2,
-		TIMELIMIT = 3
-	};
+enum class ProblemType {
+  INFEASIBLE = 0,
+  OPTIMAL = 1,
+  UNBOUNDED = 2,
+  TIMELIMIT = 3
+};
 
-	enum class PivotRule { BLOCK_SEARCH = 0 };
+enum class PivotRule { BLOCK_SEARCH = 0 };
 
-	class Var {
-	public:
-		int a; // First point
-		int b; // Second point
-		int c; // Distance
+class Var {
+ public:
+  int a;  // First point
+  int b;  // Second point
+  int c;  // Distance
 
-		Var() : a(0), b(0), c(-1) {}
+  Var() : a(0), b(0), c(-1) {}
 
-		Var(int _a, int _b, int _c) : a(_a), b(_b), c(_c) {}
-	};
+  Var(int _a, int _b, int _c) : a(_a), b(_b), c(_c) {}
+};
 
-	typedef std::vector<Var> Vars;
+typedef std::vector<Var> Vars;
 
-} // END namespace
+// Read a text file and store it in a unique string
+std::string readTextFile(const std::string& filename, size_t& len) {
+  // Adapted from: https://github.com/simdjson/simdjson
+  std::FILE* fp = std::fopen(filename.data(), "rb");
+
+  if (fp == nullptr) return "";
+
+  // Get the file size
+  if (std::fseek(fp, 0, SEEK_END) < 0) {
+    std::fclose(fp);
+    return "";
+  }
+
+  long llen = std::ftell(fp);
+  if ((llen < 0) || (llen == LONG_MAX)) {
+    std::fclose(fp);
+    return "";
+  }
+
+  // Allocate the string
+  len = static_cast<size_t>(llen);
+  std::string s;
+  s.reserve(len);
+  if (s.data() == nullptr) {
+    std::fclose(fp);
+    return "";
+  }
+
+  // Read the string
+  std::rewind(fp);
+  size_t bytes_read = std::fread((char*)(s.data()), 1, len, fp);
+  if (std::fclose(fp) != 0 || bytes_read != len) return "";
+
+  return s;
+}
+
+}  // namespace DOT

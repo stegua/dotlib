@@ -83,7 +83,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\gualandi\Documents\GitHub\dotlib\mpc\include;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\DevLIBs\lemon\lemon-1.3.1;C:\Users\gualandi\Documents\GitHub\dotlib\mpc\include;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\lib\x64_windows_msvc14\stat_mda;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -118,8 +118,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>DEBUG;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -133,11 +134,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -151,9 +153,13 @@
     <ClCompile Include="..\..\..\src\SolverCLI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\include\DOT_CoinLemon.h" />
     <ClInclude Include="..\..\..\include\DOT_Commons.h" />
+    <ClInclude Include="..\..\..\include\DOT_Cplex.h" />
+    <ClInclude Include="..\..\..\include\DOT_Cuda.h" />
     <ClInclude Include="..\..\..\include\DOT_EapiSimplex.h" />
     <ClInclude Include="..\..\..\include\DOT_Histogram2D.h" />
+    <ClInclude Include="..\..\..\include\DOT_Lemon.h" />
     <ClInclude Include="..\..\..\include\DOT_NetSimplex.h" />
     <ClInclude Include="..\..\..\include\DOT_NetSimplexUnit.h" />
     <ClInclude Include="..\..\..\include\DOT_Solver.h" />

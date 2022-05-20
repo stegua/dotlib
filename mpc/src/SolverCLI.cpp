@@ -10,7 +10,10 @@
 #include <cassert>
 #include <random>
 
+#include "DOT_CoinLemon.h"
+#include "DOT_Cplex.h"
 #include "DOT_EapiSimplex.h"
+#include "DOT_Lemon.h"
 #include "DOT_NetSimplex.h"
 #include "DOT_Solver.h"
 
@@ -361,6 +364,32 @@ int main(int argc, char *argv[]) {
 
   std::uniform_int_distribution<> Uniform1N(1, n);
 
+  if (true) {
+    DOT::SolverCplex solver;
+    size_t len = 0;
+
+    auto start_t = std::chrono::steady_clock::now();
+
+    // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
+    // PA_dense_CD_tract
+    parseDIMACS("C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_SH_tract.net",
+                len, solver);
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    fprintf(stdout, "start solver: %f\n", _all);
+    fflush(stdout);
+
+    //        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_CD_county.txt",
+    //        len);
+    // solver.dump();
+    solver.solve();
+  }
+
   if (false) {
     assert(2 == testEapi1());
     assert(17 == testEapi2());
@@ -375,26 +404,176 @@ int main(int argc, char *argv[]) {
     // testEapi2();
   }
 
-  if (true) {
+  if (false) {
     std::string SEP = "\\";
 
     std::string base = "C:\\Users\\Gualandi\\Data\\ColorTransfer";
-    std::vector<std::string> Fs = {"color-512-seed-13.net"};
+    // std::vector<std::string> Fs = {"color-8192-seed-19.net"};
     // std::vector<std::string> Fs = {"color-4096.net"};
+
+    std::vector<std::string> Fs = {
+        "color-1024-seed-29.net",  "color-11264-seed-29.net",
+        "color-12800-seed-29.net", "color-14336-seed-29.net",
+        "color-2048-seed-29.net",  "color-3584-seed-29.net",
+        "color-512-seed-29.net",   "color-6144-seed-29.net",
+        "color-7680-seed-29.net",  "color-9216-seed-29.net",
+        "color-10240-seed-29.net", "color-11776-seed-29.net",
+        "color-13312-seed-29.net", "color-14848-seed-29.net",
+        "color-2560-seed-29.net",  "color-4096-seed-29.net",
+        "color-5120-seed-29.net",  "color-6656-seed-29.net",
+        "color-8192-seed-29.net",  "color-9728-seed-29.net",
+        "color-10752-seed-29.net", "color-12288-seed-29.net",
+        "color-13824-seed-29.net", "color-1536-seed-29.net",
+        "color-3072-seed-29.net",  "color-4608-seed-29.net",
+        "color-5632-seed-29.net",  "color-7168-seed-29.net",
+        "color-8704-seed-29.net",  "color-1024-seed-17.net",
+        "color-11264-seed-17.net", "color-12800-seed-17.net",
+        "color-14336-seed-17.net", "color-2048-seed-17.net",
+        "color-3584-seed-17.net",  "color-512-seed-17.net",
+        "color-6144-seed-17.net",  "color-7680-seed-17.net",
+        "color-9216-seed-17.net",  "color-10240-seed-17.net",
+        "color-11776-seed-17.net", "color-13312-seed-17.net",
+        "color-14848-seed-17.net", "color-2560-seed-17.net",
+        "color-4096-seed-17.net",  "color-5120-seed-17.net",
+        "color-6656-seed-17.net",  "color-8192-seed-17.net",
+        "color-9728-seed-17.net",  "color-10752-seed-17.net",
+        "color-12288-seed-17.net", "color-13824-seed-17.net",
+        "color-1536-seed-17.net",  "color-3072-seed-17.net",
+        "color-4608-seed-17.net",  "color-5632-seed-17.net",
+        "color-7168-seed-17.net",  "color-8704-seed-17.net",
+        "color-1024-seed-19.net",  "color-11264-seed-19.net",
+        "color-12800-seed-19.net", "color-14336-seed-19.net",
+        "color-2048-seed-19.net",  "color-3584-seed-19.net",
+        "color-512-seed-19.net",   "color-6144-seed-19.net",
+        "color-7680-seed-19.net",  "color-9216-seed-19.net",
+        "color-10240-seed-19.net", "color-11776-seed-19.net",
+        "color-13312-seed-19.net", "color-14848-seed-19.net",
+        "color-2560-seed-19.net",  "color-4096-seed-19.net",
+        "color-5120-seed-19.net",  "color-6656-seed-19.net",
+        "color-8192-seed-19.net",  "color-9728-seed-19.net",
+        "color-10752-seed-19.net", "color-12288-seed-19.net",
+        "color-13824-seed-19.net", "color-1536-seed-19.net",
+        "color-3072-seed-19.net",  "color-4608-seed-19.net",
+        "color-5632-seed-19.net",  "color-7168-seed-19.net",
+        "color-8704-seed-19.net",  "color-1024-seed-23.net",
+        "color-11264-seed-23.net", "color-12800-seed-23.net",
+        "color-14336-seed-23.net", "color-2048-seed-23.net",
+        "color-3584-seed-23.net",  "color-512-seed-23.net",
+        "color-6144-seed-23.net",  "color-7680-seed-23.net",
+        "color-9216-seed-23.net",  "color-10240-seed-23.net",
+        "color-11776-seed-23.net", "color-13312-seed-23.net",
+        "color-14848-seed-23.net", "color-2560-seed-23.net",
+        "color-4096-seed-23.net",  "color-5120-seed-23.net",
+        "color-6656-seed-23.net",  "color-8192-seed-23.net",
+        "color-9728-seed-23.net",  "color-10752-seed-23.net",
+        "color-12288-seed-23.net", "color-13824-seed-23.net",
+        "color-1536-seed-23.net",  "color-3072-seed-23.net",
+        "color-4608-seed-23.net",  "color-5632-seed-23.net",
+        "color-7168-seed-23.net",  "color-8704-seed-23.net",
+        "color-1024-seed-29.net",  "color-11264-seed-29.net",
+        "color-12800-seed-29.net", "color-14336-seed-29.net",
+        "color-2048-seed-29.net",  "color-3584-seed-29.net",
+        "color-512-seed-29.net",   "color-6144-seed-29.net",
+        "color-7680-seed-29.net",  "color-9216-seed-29.net",
+        "color-10240-seed-29.net", "color-11776-seed-29.net",
+        "color-13312-seed-29.net", "color-14848-seed-29.net",
+        "color-2560-seed-29.net",  "color-4096-seed-29.net",
+        "color-5120-seed-29.net",  "color-6656-seed-29.net",
+        "color-8192-seed-29.net",  "color-9728-seed-29.net",
+        "color-10752-seed-29.net", "color-12288-seed-29.net",
+        "color-13824-seed-29.net", "color-1536-seed-29.net",
+        "color-3072-seed-29.net",  "color-4608-seed-29.net",
+        "color-5632-seed-29.net",  "color-7168-seed-29.net",
+        "color-8704-seed-29.net",  "color-1024-seed-31.net",
+        "color-11264-seed-31.net", "color-12800-seed-31.net",
+        "color-14336-seed-31.net", "color-2048-seed-31.net",
+        "color-3584-seed-31.net",  "color-512-seed-31.net",
+        "color-6144-seed-31.net",  "color-7680-seed-31.net",
+        "color-9216-seed-31.net",  "color-10240-seed-31.net",
+        "color-11776-seed-31.net", "color-13312-seed-31.net",
+        "color-14848-seed-31.net", "color-2560-seed-31.net",
+        "color-4096-seed-31.net",  "color-5120-seed-31.net",
+        "color-6656-seed-31.net",  "color-8192-seed-31.net",
+        "color-9728-seed-31.net",  "color-10752-seed-31.net",
+        "color-12288-seed-31.net", "color-13824-seed-31.net",
+        "color-1536-seed-31.net",  "color-3072-seed-31.net",
+        "color-4608-seed-31.net",  "color-5632-seed-31.net",
+        "color-7168-seed-31.net",  "color-8704-seed-31.net",
+        "color-1024-seed-37.net",  "color-11264-seed-37.net",
+        "color-12800-seed-37.net", "color-14336-seed-37.net",
+        "color-2048-seed-37.net",  "color-3584-seed-37.net",
+        "color-512-seed-37.net",   "color-6144-seed-37.net",
+        "color-7680-seed-37.net",  "color-9216-seed-37.net",
+        "color-10240-seed-37.net", "color-11776-seed-37.net",
+        "color-13312-seed-37.net", "color-14848-seed-37.net",
+        "color-2560-seed-37.net",  "color-4096-seed-37.net",
+        "color-5120-seed-37.net",  "color-6656-seed-37.net",
+        "color-8192-seed-37.net",  "color-9728-seed-37.net",
+        "color-10752-seed-37.net", "color-12288-seed-37.net",
+        "color-13824-seed-37.net", "color-1536-seed-37.net",
+        "color-3072-seed-37.net",  "color-4608-seed-37.net",
+        "color-5632-seed-37.net",  "color-7168-seed-37.net",
+        "color-8704-seed-37.net",  "color-1024-seed-41.net",
+        "color-11264-seed-41.net", "color-12800-seed-41.net",
+        "color-14336-seed-41.net", "color-2048-seed-41.net",
+        "color-3584-seed-41.net",  "color-512-seed-41.net",
+        "color-6144-seed-41.net",  "color-7680-seed-41.net",
+        "color-9216-seed-41.net",  "color-10240-seed-41.net",
+        "color-11776-seed-41.net", "color-13312-seed-41.net",
+        "color-14848-seed-41.net", "color-2560-seed-41.net",
+        "color-4096-seed-41.net",  "color-5120-seed-41.net",
+        "color-6656-seed-41.net",  "color-8192-seed-41.net",
+        "color-9728-seed-41.net",  "color-10752-seed-41.net",
+        "color-12288-seed-41.net", "color-13824-seed-41.net",
+        "color-1536-seed-41.net",  "color-3072-seed-41.net",
+        "color-4608-seed-41.net",  "color-5632-seed-41.net",
+        "color-7168-seed-41.net",  "color-8704-seed-41.net",
+        "color-1024-seed-43.net",  "color-11264-seed-43.net",
+        "color-12800-seed-43.net", "color-14336-seed-43.net",
+        "color-2048-seed-43.net",  "color-3584-seed-43.net",
+        "color-512-seed-43.net",   "color-6144-seed-43.net",
+        "color-7680-seed-43.net",  "color-9216-seed-43.net",
+        "color-10240-seed-43.net", "color-11776-seed-43.net",
+        "color-13312-seed-43.net", "color-14848-seed-43.net",
+        "color-2560-seed-43.net",  "color-4096-seed-43.net",
+        "color-5120-seed-43.net",  "color-6656-seed-43.net",
+        "color-8192-seed-43.net",  "color-9728-seed-43.net",
+        "color-10752-seed-43.net", "color-12288-seed-43.net",
+        "color-13824-seed-43.net", "color-1536-seed-43.net",
+        "color-3072-seed-43.net",  "color-4608-seed-43.net",
+        "color-5632-seed-43.net",  "color-7168-seed-43.net",
+        "color-8704-seed-43.net",  "color-1024-seed-47.net",
+        "color-11264-seed-47.net", "color-12800-seed-47.net",
+        "color-14336-seed-47.net", "color-2048-seed-47.net",
+        "color-3584-seed-47.net",  "color-512-seed-47.net",
+        "color-6144-seed-47.net",  "color-7680-seed-47.net",
+        "color-9216-seed-47.net",  "color-10240-seed-47.net",
+        "color-11776-seed-47.net", "color-13312-seed-47.net",
+        "color-14848-seed-47.net", "color-2560-seed-47.net",
+        "color-4096-seed-47.net",  "color-5120-seed-47.net",
+        "color-6656-seed-47.net",  "color-8192-seed-47.net",
+        "color-9728-seed-47.net",  "color-10752-seed-47.net",
+        "color-12288-seed-47.net", "color-13824-seed-47.net",
+        "color-1536-seed-47.net",  "color-3072-seed-47.net",
+        "color-4608-seed-47.net",  "color-5632-seed-47.net",
+        "color-7168-seed-47.net",  "color-8704-seed-47.net",
+
+        /*, "color-5120-seed-17.net",
+        "color-5120-seed-19.net", "color-4608-seed-13.net",
+        "color-4608-seed-17.net", "color-4608-seed-19.net",
+        "color-4096-seed-13.net", "color-4096-seed-17.net",
+        "color-4096-seed-19.net", "color-3584-seed-13.net",
+        "color-3584-seed-17.net", "color-3584-seed-19.net",
+        "color-3072-seed-13.net", "color-3072-seed-17.net",
+        "color-3072-seed-19.net",*/
+    };
+
     DOT::Solver solver;
 
     // Profiling algorithms
     std::array<double, 4> stat = {0, 0, 0, 0};
     std::array<double, 4> eapi = {0, 0, 0, 0};
     std::array<double, 4> eati = {0, 0, 0, 0};
-
-#ifdef __MY_CUDA
-    // Data for CUDA support: set up device
-    int dev = 0;
-    cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, dev);
-    cudaSetDevice(dev);
-#endif
 
     for (const auto &filename : Fs) {
       fprintf(stdout, "Step 1\n");
@@ -413,20 +592,18 @@ int main(int argc, char *argv[]) {
       // eati[3] += times[3];
       // stat[2] += times[0];
 
-#ifdef __MY_CUDA
-      stat[1] = solver.solveDimacs("colgen_cuda");
-#endif
+      //    stat[1] = solver.solveDimacs("colgen");
 
-      stat[1] = solver.solveDimacs("colgen");
       stat[1] = solver.solveDimacs("bipartiteEapi");
-      stat[1] = solver.solveDimacs("bipartiteEati");
+
+      //    stat[1] = solver.solveDimacs("bipartiteEati");
       // eapi[0] += times[0];
       // eapi[1] += times[1];
       // eapi[2] += times[2];
       // eapi[3] += times[3];
       // stat[1] += times[0];
 
-      stat[0] += solver.solveDimacs("netcplex");
+      //      stat[0] += solver.solveDimacs("netcplex");
 
       // stat[3] += solver.solverDimacs("colgen");
     }
