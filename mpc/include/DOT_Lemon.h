@@ -147,7 +147,7 @@ class NetSimplexCapacity {
       // The main parameters of the pivot rule
       const double BLOCK_SIZE_FACTOR = 1.0;
       const int MIN_BLOCK_SIZE =
-          20;  // THIS VALUE IS IMPORTANT AND IT SHOULD BE A PARAMETER (!)
+          10;  // THIS VALUE IS IMPORTANT AND IT SHOULD BE A PARAMETER (!)
 
       _block_size =
           std::max(int(BLOCK_SIZE_FACTOR * std::sqrt(double(_dummy_arc))),
@@ -159,6 +159,7 @@ class NetSimplexCapacity {
       Cost c, min = negeps;
       int cnt = _block_size;
       int e;
+      _in_arc = -1;
       for (e = _next_arc; e != _arc_num; ++e) {
         c = _state[e] * (_cost[e] + _pi[_source[e]] - _pi[_target[e]]);
         if (c < min) {
@@ -231,7 +232,7 @@ class NetSimplexCapacity {
     // 2*n-1 nodes in a basic solution
     int max_arc_num = 0;
     if (INIT == 'F')  // Full
-      max_arc_num = 2 * _node_num + arc_num + 1;
+      max_arc_num = _node_num + arc_num;
 
     if (INIT == 'E')  // Empty, for Column Generation
       max_arc_num = 4 * _node_num + 1;
@@ -264,7 +265,7 @@ class NetSimplexCapacity {
 
     // Interal parameters
     _timelimit = std::numeric_limits<double>::max();
-    _opt_tolerance = 1e-06;
+    _opt_tolerance = 0.0;
   }
 
   ProblemType run() {
@@ -394,6 +395,23 @@ class NetSimplexCapacity {
 
   void setOptTolerance(double o) { _opt_tolerance = o; }
 
+  void dumpTable() const {
+    fprintf(stdout, "\nsupply  :\t");
+    for (int i = 0; i < _node_num + 1; i++)
+      fprintf(stdout, "%.f\t", _supply[i]);
+
+    fprintf(stdout, "\npi     :\t");
+    for (int i = 0; i < _node_num + 1; i++) fprintf(stdout, "%.f\t", _pi[i]);
+
+    fprintf(stdout, "\npred   :\t");
+    for (int i = 0; i < _node_num + 1; i++) fprintf(stdout, "%d\t", _pred[i]);
+    fprintf(stdout, "\npred_di:\t");
+    for (int i = 0; i < _node_num + 1; i++)
+      fprintf(stdout, "%d\t", _pred_dir[i]);
+    fprintf(stdout, "\n\n");
+    fprintf(stdout, "Cost: %d\n", totalCost());
+  }
+
   // Check feasibility
   ProblemType checkFeasibility() {
     for (int e = 0; e != _dummy_arc; ++e)
@@ -438,7 +456,7 @@ class NetSimplexCapacity {
     if (_node_num == 0) return false;
 
     // Check the sum of supply values
-    _sum_supply = 0;
+    _sum_supply = 0.0;
     for (int i = 0; i != _node_num; ++i) _sum_supply += _supply[i];
 
     if (_sum_supply > 0) return false;
@@ -620,15 +638,14 @@ class NetSimplexCapacity {
         _flow[_pred[u]] -= _pred_dir[u] * val;
       for (int u = _target[in_arc]; u != join; u = _parent[u])
         _flow[_pred[u]] += _pred_dir[u] * val;
-
-      // Update the state of the entering and leaving arcs
-      if (change) {
-        _state[in_arc] = STATE_TREE;
-        _state[_pred[u_out]] =
-            (_flow[_pred[u_out]] == 0) ? STATE_LOWER : STATE_UPPER;
-      } else {
-        _state[in_arc] = -_state[in_arc];
-      }
+    }
+    // Update the state of the entering and leaving arcs
+    if (change) {
+      _state[in_arc] = STATE_TREE;
+      _state[_pred[u_out]] =
+          (_flow[_pred[u_out]] == 0) ? STATE_LOWER : STATE_UPPER;
+    } else {
+      _state[in_arc] = -_state[in_arc];
     }
   }
 
@@ -776,6 +793,9 @@ class NetSimplexCapacity {
       bool stop = pivot.findEnteringArc();
       if (!stop) break;
 
+      // dumpTable();
+      // fprintf(stdout, "inarc: %d\n", in_arc);
+
       findJoinNode();
       bool change = findLeavingArc();
       if (delta >= MAX) return ProblemType::UNBOUNDED;
@@ -786,9 +806,10 @@ class NetSimplexCapacity {
       }
 
       // Add as log file
-      _iterations++;
-      if (_iterations % 1000 == 0)
-        fprintf(stdout, "%d - %.4f\n", _iterations, totalCost());
+      //_iterations++;
+      //// if (_iterations > 5) break;
+      // if (_iterations % 1000 == 0)
+      //  fprintf(stdout, "%d - %.4f\n", _iterations, totalCost());
     }
 
     auto end_t = std::chrono::steady_clock::now();
@@ -838,16 +859,21 @@ class SolverNSC {
     capLB = &data[_m];
     capUB = &data[2 * _m];
     supply = &data[3 * m];
+
+    // Set all suply to zero
+    memset(supply, 0, n * sizeof(double));
   }
 
   // Reset memory for reusing the allocated memory
   void reset(void) {
-    memset(arcs, 0, size_arcs);
-    memset(data, 0, size_data);
+    memset(arcs, 0, size_arcs * sizeof(size_t));
+    memset(data, 0, size_data * sizeof(double));
   }
 
   // Add node
   void addNode(size_t i, double b) { supply[i] = b; }
+  void pluNode(size_t i, double b) { supply[i] += b; }
+  void subNode(size_t i, double b) { supply[i] -= b; }
 
   // Add arc
   void addArc(size_t i, size_t j, double _cost, double _capLB, double _capUB) {
@@ -890,10 +916,10 @@ class SolverNSC {
           ++buf;
           buf = strchr(buf, sep);
           ++buf;
-          n = std::stol(buf);
+          n = (size_t)std::atol(buf);
           buf = strchr(buf, sep);
           ++buf;
-          m = std::stol(buf);
+          m = (size_t)std::atol(buf);
           buf = strchr(buf, eol);
           ++buf;
           fprintf(stdout, "%d %d\n", n, m);
@@ -906,17 +932,19 @@ class SolverNSC {
     if (n > 0 && m > 0) reserveArcs(n, m);
 
     // Read remaining data
-
+    double tot_remove = 0;
+    size_t tot_m = 0;
+    offset_cost = 0.0;
     while (buf != NULL) {
       if (buf[0] == 'n') {
         buf = strchr(buf, sep);
         ++buf;
 
-        size_t _idx = std::stol(buf);
+        size_t _idx = (size_t)std::atol(buf);
 
         buf = strchr(buf, sep);
         ++buf;
-        double _s = std::stod(buf);
+        double _s = std::atof(buf);
 
         buf = strchr(buf, eol);
         if (buf == NULL) break;
@@ -928,38 +956,53 @@ class SolverNSC {
           buf = strchr(buf, sep);
           ++buf;
 
-          size_t i = std::stol(buf);
+          size_t i = (size_t)std::atol(buf);
 
           buf = strchr(buf, sep);
           ++buf;
-          size_t j = std::stol(buf);
+          size_t j = (size_t)std::atol(buf);
 
           buf = strchr(buf, sep);
           ++buf;
-          double _lb = std::stod(buf);
+          double _lb = std::atof(buf);
 
           buf = strchr(buf, sep);
           ++buf;
-          double _ub = std::stod(buf);
+          double _ub = std::atof(buf);
 
           buf = strchr(buf, sep);
           ++buf;
-          double _c = std::stod(buf);
-          addArc(i - 1, j - 1, _c, _lb, _ub);
-          if (idx == m) return;
+          double _c = std::atof(buf);
+
+          if (_lb == 0.0)
+            addArc(i - 1, j - 1, _c, _lb, _ub);
+          else {
+            subNode(i - 1, _lb);
+            pluNode(j - 1, _lb);
+            addArc(i - 1, j - 1, _c, 0.0, _ub - _lb);
+
+            offset_cost += _c * _lb;
+          }
+
+          tot_m++;
+          if (tot_m == m) break;
 
           buf = strchr(buf, eol);
           ++buf;
         }
       }
     }
+
+    return;
   }
 
   // Solve the instance
   double solve() {
+    m = idx;
     NetSimplexCapacity simplex('F', n, m);
     simplex.setTimelimit(3600);
-    simplex.setOptTolerance(1.0);
+    simplex.setOptTolerance(0.0);
+    fprintf(stdout, "offset: %d\n", offset_cost);
 
     for (size_t i = 0; i < n; i++) simplex.addNode((int)i, supply[i]);
 
@@ -968,13 +1011,13 @@ class SolverNSC {
 
     simplex.run();
 
-    double r = simplex.totalCost();
+    double r = offset_cost + simplex.totalCost();
 
     size_t api_it = simplex.iterations();
     double api_time = simplex.runtime();
 
-    fprintf(stdout, "CHECK SOL %.3f ==> %d, it: %d, time: %.3f\n", n, r, api_it,
-            api_time);
+    fprintf(stdout, "CHECK SOL %.3f ==> %d#%d, it: %d, time: %.3f\n", r, n, m,
+            api_it, api_time);
 
     return r;
   }
@@ -1000,6 +1043,9 @@ class SolverNSC {
   size_t* arcs;
   size_t* head;
   size_t* tail;
+
+  // Offset of cost for handling lower bounds
+  double offset_cost;
 
   // Keep contigous memory
   size_t size_data;

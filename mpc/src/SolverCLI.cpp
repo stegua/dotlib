@@ -365,15 +365,18 @@ int main(int argc, char *argv[]) {
   std::uniform_int_distribution<> Uniform1N(1, n);
 
   if (true) {
-    DOT::SolverCplex solver;
+    DOT::SolverCoinLemon solver;
     size_t len = 0;
 
     auto start_t = std::chrono::steady_clock::now();
 
     // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
     // PA_dense_CD_tract
-    parseDIMACS("C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_SH_tract.net",
-                len, solver);
+    solver.parseDIMACS(
+        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_CD_block.net", len);
+    // solver.parseDIMACS(
+    //    "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_CD_county.net",
+    //    len);
 
     auto end_t = std::chrono::steady_clock::now();
     auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -384,8 +387,54 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "start solver: %f\n", _all);
     fflush(stdout);
 
-    //        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_CD_county.txt",
-    //        len);
+    // solver.dump();
+    solver.solve();
+  }
+
+  if (true) {
+    DOT::SolverNSC solver;
+    size_t len = 0;
+
+    auto start_t = std::chrono::steady_clock::now();
+
+    // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
+    // PA_dense_CD_tract
+    solver.parseDIMACS(
+        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_CD_block.net", len);
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    fprintf(stdout, "start solver: %f\n", _all);
+    fflush(stdout);
+
+    // solver.dump();
+    solver.solve();
+  }
+
+  if (false) {
+    DOT::SolverCplex solver;
+    size_t len = 0;
+
+    auto start_t = std::chrono::steady_clock::now();
+
+    // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
+    // PA_dense_CD_tract
+    parseDIMACS("C:\\Users\\Gualandi\\Data\\Districting\\test_cap5.net", len,
+                solver);
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    fprintf(stdout, "start solver: %f\n", _all);
+    fflush(stdout);
+
     // solver.dump();
     solver.solve();
   }

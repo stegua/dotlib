@@ -36,7 +36,7 @@
 #include <lemon/network_simplex.h>
 
 typedef lemon::ListDigraph LemonGraph;
-typedef int64_t LimitValueType;
+typedef double LimitValueType;
 typedef lemon::NetworkSimplex<LemonGraph, LimitValueType, LimitValueType>
     LemonSimplex;
 
@@ -147,7 +147,6 @@ class SolverCoinLemon {
       buf = std::strchr(buf, sep);
       ++buf;
       _c = std::atof(buf);
-
       arcs.emplace_back(G.addArc(nodes[i - 1], nodes[j - 1]));
       cost.emplace_back(_c);
       lb.emplace_back(_lb);

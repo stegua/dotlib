@@ -74,7 +74,7 @@ class SolverCplex {
     capLB = &data[_m];
     capUB = &data[2 * _m];
     supply = &data[3 * _m];
-    memset(supply, 0.0, _n);
+    memset(supply, 0.0, _n * sizeof(double));
   }
 
   // Reset memory for reusing the allocated memory
@@ -270,10 +270,10 @@ void parseDIMACS(const std::string filename, size_t& len,
         ++buf;
         buf = std::strchr(buf, sep);
         ++buf;
-        solver.n = std::stol(buf);
+        solver.n = std::atol(buf);
         buf = std::strchr(buf, sep);
         ++buf;
-        solver.m = std::stol(buf);
+        solver.m = std::atol(buf);
         buf = std::strchr(buf, eol);
         ++buf;
         fprintf(stdout, "%d %d\n", solver.n, solver.m);

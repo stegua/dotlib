@@ -1459,16 +1459,37 @@ class NetworkSimplex {
     return INFEASIBLE;  // avoid warning
   }
 
+  void dumpTable() const {
+    fprintf(stdout, "\nsupply  :\t");
+    for (int i = 0; i < _node_num + 1; i++)
+      fprintf(stdout, "%.f\t", _supply[i]);
+
+    fprintf(stdout, "\npi     :\t");
+    for (int i = 0; i < _node_num + 1; i++) fprintf(stdout, "%.f\t", _pi[i]);
+
+    fprintf(stdout, "\npred   :\t");
+    for (int i = 0; i < _node_num + 1; i++) fprintf(stdout, "%d\t", _pred[i]);
+    fprintf(stdout, "\npred_di:\t");
+    for (int i = 0; i < _node_num + 1; i++)
+      fprintf(stdout, "%d\t", _pred_dir[i]);
+    fprintf(stdout, "\n\n");
+    fprintf(stdout, "Cost: %d\n", totalCost());
+  }
+
   template <typename PivotRuleImpl>
   ProblemType start() {
     PivotRuleImpl pivot(*this);
 
     // Perform heuristic initial pivots
-    if (!initialPivots()) return UNBOUNDED;
+    // if (!initialPivots()) return UNBOUNDED;
 
     // Execute the Network Simplex algorithm
     while (pivot.findEnteringArc()) {
       findJoinNode();
+
+      dumpTable();
+      fprintf(stdout, "inarc: %d\n", in_arc);
+
       bool change = findLeavingArc();
       if (delta >= MAX) return UNBOUNDED;
       changeFlow(change);
