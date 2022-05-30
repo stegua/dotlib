@@ -147,7 +147,7 @@ class NetSimplexCapacity {
       // The main parameters of the pivot rule
       const double BLOCK_SIZE_FACTOR = 1.0;
       const int MIN_BLOCK_SIZE =
-          10;  // THIS VALUE IS IMPORTANT AND IT SHOULD BE A PARAMETER (!)
+          20;  // THIS VALUE IS IMPORTANT AND IT SHOULD BE A PARAMETER (!)
 
       _block_size =
           std::max(int(BLOCK_SIZE_FACTOR * std::sqrt(double(_dummy_arc))),
@@ -185,7 +185,7 @@ class NetSimplexCapacity {
       if (min >= negeps) return false;
 
     search_end:
-      _next_arc = _in_arc;
+      _next_arc = e;
       return true;
     }
 
