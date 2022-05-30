@@ -78,7 +78,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\gualandi\Documents\GitHub\dotlib\mpc\include;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\DevLIBs\lemon\lemon-1.3.1;C:\Users\gualandi\Documents\GitHub\dotlib\mpc\include;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\lib\x64_windows_msvc14\stat_mda;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
