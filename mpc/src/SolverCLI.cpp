@@ -373,7 +373,7 @@ int main(int argc, char *argv[]) {
     // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
     // PA_dense_CD_tract
     solver.parseDIMACS(
-        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_CD_block.net", len);
+        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_SH_tract.net", len);
     // solver.parseDIMACS(
     //    "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_CD_county.net",
     //    len);
@@ -400,7 +400,7 @@ int main(int argc, char *argv[]) {
     // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
     // PA_dense_CD_tract
     solver.parseDIMACS(
-        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_CD_block.net", len);
+        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_SH_tract.net", len);
 
     auto end_t = std::chrono::steady_clock::now();
     auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -412,7 +412,7 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
 
     // solver.dump();
-    solver.solve();
+    solver.colgen();
   }
 
   if (false) {
