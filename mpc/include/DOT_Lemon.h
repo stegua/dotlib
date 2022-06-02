@@ -71,6 +71,7 @@ class NetSimplexCapacity {
   Value _sum_supply;
 
   // Data structures for storing the digraph
+  IntVector _id;
   IntVector _source;
   IntVector _target;
 
@@ -145,7 +146,7 @@ class NetSimplexCapacity {
           _arc_num(ns._arc_num),
           _dummy_arc(ns._dummy_arc),
           _next_arc(ns._next_arc),
-          negeps(std::nextafter(-1e-09, -0.0)) {
+          negeps(std::nextafter(-1e-17, -0.0)) {
       // The main parameters of the pivot rule
       const double BLOCK_SIZE_FACTOR = 1.0;
       const int MIN_BLOCK_SIZE =
@@ -240,6 +241,7 @@ class NetSimplexCapacity {
     if (INIT == 'E')  // Empty, for Column Generation
       max_arc_num = 4 * _node_num + 1;
 
+    _id.reserve(max_arc_num);
     _source.reserve(max_arc_num);
     _target.reserve(max_arc_num);
 
@@ -250,6 +252,7 @@ class NetSimplexCapacity {
     _flow.reserve(max_arc_num);
     _state.reserve(max_arc_num);
 
+    _id.resize(_node_num);
     _source.resize(_node_num);
     _target.resize(_node_num);
 
@@ -292,8 +295,9 @@ class NetSimplexCapacity {
 
   void addNode(int i, Value b) { _supply[i] = b; }
 
-  size_t addArc(int a, int b, Cost c, Value u) {
+  size_t addArc(int a, int b, Cost c, Value u, int id) {
     size_t idx = _source.size();
+    _id.push_back(id);
     _source.push_back(a);
     _target.push_back(b);
     _cost.push_back(c);
@@ -333,14 +337,14 @@ class NetSimplexCapacity {
     int new_arcs = 0;
 
     for (const auto& v : Vs) {
-      addArc(v.a, v.b, v.c, v.d);
+      addArc(v.a, v.b, v.c, v.d, v.id);
       new_arcs++;
     }
 
     return new_arcs;
   }
 
-  int updateArcs(const CapVars& as) {
+  int updateArcs(const CapVars& as, vector<bool>& ARCS) {
     int new_arc = 0;
     size_t idx = 0;
     size_t idx_max = as.size();
@@ -348,31 +352,61 @@ class NetSimplexCapacity {
     int e = _fixed_arc;
     int e_max = _arc_num;
 
+    vector<int> added;
+    added.reserve(as.size());
+
     // Store the new arc variable, replacing an used arc,
     // out of the basis and with positive reduced cost
     for (; idx < idx_max; ++idx) {
       while (e < e_max) {
         // Replace useless variables with new variables
-        if (_state[e] == STATE_LOWER &&
-            (_cost[e] + _pi[_source[e]] - _pi[_target[e]] > 1e-05))
+        if (_state[e] != STATE_TREE &&
+            (_cost[e] + _pi[_source[e]] - _pi[_target[e]] > 1e-09))
           break;
         ++e;
       }
       if (e >= e_max) break;
+      ARCS[_id[e]] = false;
+      _id[e] = as[idx].id;
       _source[e] = as[idx].a;
       _target[e] = as[idx].b;
       _cost[e] = as[idx].c;
       _cap[e] = as[idx].d;
       _upper[e] = as[idx].d;
+
+      added.push_back(e);
+
       if (new_arc == 0) _next_arc = e;
       new_arc++;
     }
 
     for (; idx < idx_max; ++idx) {
-      addArc(as[idx].a, as[idx].b, as[idx].c, as[idx].d);
+      int e = addArc(as[idx].a, as[idx].b, as[idx].c, as[idx].d, as[idx].id);
+      added.push_back(e);
+
+      // Pivot right away
       if (new_arc == 0) _next_arc = e;
       new_arc++;
     }
+
+    // Perform heuristic initial pivots
+    for (int i = 0; i != int(added.size()); ++i) {
+      in_arc = added[i];
+      if (_state[in_arc] *
+              (_cost[in_arc] + _pi[_source[in_arc]] - _pi[_target[in_arc]]) <
+          _opt_tolerance) {
+        findJoinNode();
+        bool change = findLeavingArc();
+        if (delta >= MAX) return false;
+        changeFlow(change);
+        if (change) {
+          updateTreeStructure();
+          updatePotential();
+        }
+      }
+    }
+
+    // fprintf(stdout, "done heuristic pivots:% d\n", cc);
 
     return new_arc;
   }
@@ -1112,8 +1146,8 @@ class SolverNSC {
 
     for (size_t i = 0; i < n; i++) simplex.addNode((int)i, supply[i]);
 
-    for (size_t i = 0; i < m; i++)
-      simplex.addArc((int)head[i], (int)tail[i], cost[i], capUB[i]);
+    for (size_t e = 0; e < m; e++)
+      simplex.addArc((int)head[e], (int)tail[e], cost[e], capUB[e], e);
 
     simplex.run();
 
@@ -1170,13 +1204,13 @@ class SolverNSC {
     std::vector<bool> ARCS(m, false);
 
     double _all_p = 0.0;
-
+    double negeps = std::nextafter(-1e-17, -0.0);
     while (_status != ProblemType::TIMELIMIT) {
       // Take the dual values
       for (int j = 0; j < n; ++j) pi[j] = simplex.potential(j);
 
       for (int k = 0; k < nk; ++k) {
-        best_v[k] = -0.0;
+        best_v[k] = negeps;
         best_e[k] = -1;
       }
 
@@ -1184,15 +1218,14 @@ class SolverNSC {
       auto start_p = std::chrono::steady_clock::now();
 
       // To improve this loop ----------------------
-      for (int e = 0; e < m; ++e)
-        if (!ARCS[e]) {
-          int k = M[tail[e]];
-          double violation = cost[e] + pi[head[e]] - pi[tail[e]];
-          if (violation < best_v[k]) {
-            best_v[k] = violation;
-            best_e[k] = e;
-          }
+      for (int e = 0; e < m; ++e) {
+        int k = M[tail[e]];
+        double violation = cost[e] + pi[head[e]] - pi[tail[e]];
+        if (violation < best_v[k] && !ARCS[e]) {
+          best_v[k] = violation;
+          best_e[k] = e;
         }
+      }
 
       auto end_p = std::chrono::steady_clock::now();
       _all_p += double(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1206,7 +1239,7 @@ class SolverNSC {
       for (int k = 0; k < nk; ++k)
         if (best_e[k] >= 0) {
           int e = best_e[k];
-          vnew.emplace_back(head[e], tail[e], cost[e], capUB[e]);
+          vnew.emplace_back(head[e], tail[e], cost[e], capUB[e], e);
           ARCS[e] = true;
         }
 
@@ -1249,18 +1282,9 @@ class SolverNSC {
     auto start_t = std::chrono::steady_clock::now();
     m = idx;
 
-    std::unordered_set<int> Ks;
-    for (int e = 0; e < m; ++e) Ks.insert(tail[e]);
-    int nk = Ks.size();
-    unordered_map<int, int> M;
-    int vv = 0;
-    for (int u : Ks) {
-      M[u] = vv;
-      ++vv;
-    }
-
-    int NUM_BLOCKS = 2 * n;
-    int block = m / NUM_BLOCKS;
+    int NUM_BLOCKS = 1024;
+    int block = m / NUM_BLOCKS + (m % NUM_BLOCKS != 0);
+    fprintf(stdout, "m: %d, NB: %d, blocks: %d\n", m, NUM_BLOCKS, block);
 
     CapVars vnew;
     vnew.reserve(NUM_BLOCKS);
@@ -1274,7 +1298,8 @@ class SolverNSC {
     // Simplex
     NetSimplexCapacity simplex('E', n, 0);
     simplex.setTimelimit(3600);
-    simplex.setOptTolerance(0.0);
+    double negeps = std::nextafter(-1e-09, -0.0);
+    simplex.setOptTolerance(negeps);
 
     double ART_COST = 0;
     for (int e = 0; e < m; ++e)
@@ -1298,8 +1323,9 @@ class SolverNSC {
       auto start_p = std::chrono::steady_clock::now();
 
       // To improve this loop ----------------------
+#pragma omp parallel for
       for (int b = 0; b < NUM_BLOCKS; ++b) {
-        best_v[b] = -0.0;
+        best_v[b] = negeps;
         best_e[b] = -1;
 
         for (int e = b * block, e_max = std::min<int>(m, (b + 1) * block);
@@ -1326,23 +1352,25 @@ class SolverNSC {
       for (int b = 0; b < NUM_BLOCKS; ++b)
         if (best_e[b] > -1) {
           int e = best_e[b];
-          vnew.emplace_back(head[e], tail[e], cost[e], capUB[e]);
+          vnew.emplace_back(head[e], tail[e], cost[e], capUB[e], e);
           ARCS[e] = true;
         }
 
-      if (vnew.empty()) break;
+      if (vnew.empty()) {
+        fprintf(stdout, " no new vars. block\n");
+        break;
+      }
 
-      // std::sort(vnew.begin(), vnew.end(),
-      //          [](const CapVar& v, const CapVar& w) { return v.c < w.c; });
+      std::sort(vnew.begin(), vnew.end(),
+                [](const CapVar& v, const CapVar& w) { return v.c > w.c; });
 
       // Replace old constraints with new ones
-      int new_arcs = simplex.addArcs(vnew);
-      if (new_arcs == 0) break;
+      simplex.updateArcs(vnew, ARCS);
 
       _status = simplex.reRun();
     }
 
-    double r = offset_cost + simplex.totalCost();
+    double r = simplex.totalCost();
 
     size_t api_it = simplex.iterations();
     double api_time = simplex.runtime();

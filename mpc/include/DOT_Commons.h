@@ -117,10 +117,12 @@ class CapVar {
   int b;     // Second point
   double c;  // Cost
   double d;  // Capacity
+  int id;    // arc id
 
-  CapVar() : a(0), b(0), c(-1), d(-1) {}
+  CapVar() : a(0), b(0), c(-1), d(-1), id(-1) {}
 
-  CapVar(int _a, int _b, double _c, double _d) : a(_a), b(_b), c(_c), d(_d) {}
+  CapVar(int _a, int _b, double _c, double _d, int _id)
+      : a(_a), b(_b), c(_c), d(_d), id(_id) {}
 };
 
 typedef std::vector<CapVar> CapVars;
