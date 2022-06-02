@@ -103,6 +103,8 @@ class NetSimplexCapacity {
   const Value MAX;
   const Value INF;
 
+  Cost ART_COST;
+
   double _runtime;
 
   double _timelimit;
@@ -143,7 +145,7 @@ class NetSimplexCapacity {
           _arc_num(ns._arc_num),
           _dummy_arc(ns._dummy_arc),
           _next_arc(ns._next_arc),
-          negeps(std::nextafter(-ns._opt_tolerance, -0.0)) {
+          negeps(std::nextafter(-1e-09, -0.0)) {
       // The main parameters of the pivot rule
       const double BLOCK_SIZE_FACTOR = 1.0;
       const int MIN_BLOCK_SIZE =
@@ -206,7 +208,8 @@ class NetSimplexCapacity {
         INF(std::numeric_limits<Value>::has_infinity
                 ? std::numeric_limits<Value>::infinity()
                 : MAX),
-        _runtime(0.0) {
+        _runtime(0.0),
+        ART_COST(-1) {
     // Check the number types
     if (!std::numeric_limits<Value>::is_signed)
       throw std::runtime_error(
@@ -258,14 +261,14 @@ class NetSimplexCapacity {
     _cap.resize(_node_num, MAX);
 
     // Dummy arcs for eavery node to root node
-    _fixed_arc = 0;
     _dummy_arc = _node_num;
     _arc_num = _node_num;
     _next_arc = _dummy_arc;
+    _fixed_arc = _dummy_arc;
 
     // Interal parameters
     _timelimit = std::numeric_limits<double>::max();
-    _opt_tolerance = 0.0;
+    _opt_tolerance = -0.0;
   }
 
   ProblemType run() {
@@ -326,7 +329,18 @@ class NetSimplexCapacity {
   }
 
   // MANCA UPDATE ARCS
-  int updateArcs(const Vars& as) {
+  int addArcs(const CapVars& Vs) {
+    int new_arcs = 0;
+
+    for (const auto& v : Vs) {
+      addArc(v.a, v.b, v.c, v.d);
+      new_arcs++;
+    }
+
+    return new_arcs;
+  }
+
+  int updateArcs(const CapVars& as) {
     int new_arc = 0;
     size_t idx = 0;
     size_t idx_max = as.size();
@@ -340,7 +354,7 @@ class NetSimplexCapacity {
       while (e < e_max) {
         // Replace useless variables with new variables
         if (_state[e] == STATE_LOWER &&
-            (_cost[e] + _pi[_source[e]] - _pi[_target[e]] > 1e-09))
+            (_cost[e] + _pi[_source[e]] - _pi[_target[e]] > 1e-05))
           break;
         ++e;
       }
@@ -348,14 +362,14 @@ class NetSimplexCapacity {
       _source[e] = as[idx].a;
       _target[e] = as[idx].b;
       _cost[e] = as[idx].c;
-      _cap[e] = MAX;
-      _upper[e] = MAX;
+      _cap[e] = as[idx].d;
+      _upper[e] = as[idx].d;
       if (new_arc == 0) _next_arc = e;
       new_arc++;
     }
 
     for (; idx < idx_max; ++idx) {
-      addArc(as[idx].a, as[idx].b, as[idx].c, MAX);
+      addArc(as[idx].a, as[idx].b, as[idx].c, as[idx].d);
       if (new_arc == 0) _next_arc = e;
       new_arc++;
     }
@@ -450,6 +464,9 @@ class NetSimplexCapacity {
     _state.resize(o + s, STATE_LOWER);
   }
 
+  // Set artificial cost for column generation
+  void setArtCost(Cost _art_cost) { ART_COST = _art_cost; }
+
  private:
   // Initialize internal data structures
   bool init() {
@@ -462,16 +479,18 @@ class NetSimplexCapacity {
     if (_sum_supply > 0) return false;
 
     // Initialize artifical cost
-    Cost ART_COST;
-    if (std::numeric_limits<Cost>::is_exact) {
-      ART_COST = (std::numeric_limits<Cost>::max)() / 2 + 1;
-    } else {
-      ART_COST = 0;
-      for (int i = _dummy_arc; i != _arc_num; ++i) {
-        if (_cost[i] > ART_COST) ART_COST = _cost[i];
+    if (ART_COST == -1) {
+      if (std::numeric_limits<Cost>::is_exact) {
+        ART_COST = (std::numeric_limits<Cost>::max)() / 2 + 1;
+      } else {
+        ART_COST = 0;
+        for (int i = _dummy_arc; i != _arc_num; ++i) {
+          if (_cost[i] > ART_COST) ART_COST = _cost[i];
+        }
+        ART_COST = (ART_COST + 1) * _node_num;
       }
-      ART_COST = (ART_COST + 1) * _node_num;
     }
+    fprintf(stdout, "%f\n", ART_COST);
 
     // Set data for the artificial root node
     _root = _node_num;
@@ -487,6 +506,7 @@ class NetSimplexCapacity {
     // Add artificial arcs and initialize the spanning tree data structure
     if (_sum_supply == 0) {
       // EQ supply constraints
+      fprintf(stdout, "part A\n");
       for (int u = 0, e = 0; u != _node_num; ++u, ++e) {
         _parent[u] = _root;
         _pred[u] = e;
@@ -514,6 +534,7 @@ class NetSimplexCapacity {
       }
     } else {
       // GEQ supply constraints
+      fprintf(stdout, "part B\n");
       int f = _arc_num + _node_num;
       for (int u = 0, e = _arc_num; u != _node_num; ++u, ++e) {
         _parent[u] = _root;
@@ -639,6 +660,7 @@ class NetSimplexCapacity {
       for (int u = _target[in_arc]; u != join; u = _parent[u])
         _flow[_pred[u]] += _pred_dir[u] * val;
     }
+
     // Update the state of the entering and leaving arcs
     if (change) {
       _state[in_arc] = STATE_TREE;
@@ -877,8 +899,8 @@ class NetSimplexCapacity {
       bool stop = pivot.findEnteringArc();
       if (!stop) break;
 
-      dumpTable();
-      fprintf(stdout, "inarc: %d\n", in_arc);
+      // dumpTable();
+      // fprintf(stdout, "inarc: %d\n", in_arc);
 
       findJoinNode();
       bool change = findLeavingArc();
@@ -893,7 +915,8 @@ class NetSimplexCapacity {
       _iterations++;
       //// if (_iterations > 5) break;
       // if (_iterations % 1000 == 0)
-      fprintf(stdout, "%d - %.4f\n", _iterations, totalCost());
+      //  fprintf(stdout, "%d - %.4f, arcs: %d\n", _iterations, totalCost(),
+      //          _arc_num);
     }
 
     auto end_t = std::chrono::steady_clock::now();
@@ -1107,17 +1130,9 @@ class SolverNSC {
 
   // solve the instance by column generation
   double colgen() {
+    auto start_t = std::chrono::steady_clock::now();
     m = idx;
 
-    fprintf(stdout, "1.1\n");
-    // Dummy variables
-    Vars vars(m);
-    for (int e = 0; e < m; ++e) vars[e].a = head[e];
-
-    Vars vnew;
-    vnew.reserve(m);
-
-    fprintf(stdout, "1.2\n");
     std::unordered_set<int> Ks;
     for (int e = 0; e < m; ++e) Ks.insert(tail[e]);
     int nk = Ks.size();
@@ -1128,11 +1143,11 @@ class SolverNSC {
       ++vv;
     }
 
-    fprintf(stdout, "1.3\n");
+    CapVars vnew;
+    vnew.reserve(nk);
+
     vector<double> best_v(nk, 0);
-    vector<double> best_c(nk, -1);
-    vector<int> best_b(nk, 0);
-    vector<int> best_a(nk, 0);
+    vector<int> best_e(nk, -1);
 
     // Dual multipliers
     vector<double> pi(n, 0);
@@ -1140,50 +1155,72 @@ class SolverNSC {
     // Simplex
     NetSimplexCapacity simplex('E', n, 0);
     simplex.setTimelimit(3600);
-    simplex.setOptTolerance(0.0);
+    simplex.setOptTolerance(-0.0);
+
+    double ART_COST = 0;
+    for (int e = 0; e < m; ++e)
+      if (cost[e] > ART_COST) ART_COST = cost[e];
+    ART_COST = (ART_COST + 1) * n;
+    simplex.setArtCost(ART_COST);
 
     for (size_t i = 0; i < n; i++) simplex.addNode((int)i, supply[i]);
 
-    fprintf(stdout, "1.4\n");
     ProblemType _status = simplex.run();
 
-    fprintf(stdout, "1.5\n");
+    std::vector<bool> ARCS(m, false);
+
+    double _all_p = 0.0;
+
     while (_status != ProblemType::TIMELIMIT) {
       // Take the dual values
-      for (int j = 0; j < n; ++j) pi[j] = -simplex.potential(j);
+      for (int j = 0; j < n; ++j) pi[j] = simplex.potential(j);
 
-      for (int k = 0; k < nk; + k) {
-        best_v[k] = 0;
-        best_c[k] = -1;
-        best_b[k] = 0;
-        best_a[k] = 0;
+      for (int k = 0; k < nk; ++k) {
+        best_v[k] = -0.0;
+        best_e[k] = -1;
       }
 
       // Solve separation problem:
-      for (int e = 0; e < m; ++e) {
-        int k = M[tail[e]];
+      auto start_p = std::chrono::steady_clock::now();
 
-        double violation = cost[e] - pi[head[e]] + pi[tail[e]];
-        if (violation < best_v[k]) {
-          best_v[k] = violation;
-          best_c[k] = cost[e];
-          best_b[k] = tail[e];
-          best_a[k] = head[e];
+      // To improve this loop ----------------------
+      for (int e = 0; e < m; ++e)
+        if (!ARCS[e]) {
+          int k = M[tail[e]];
+          double violation = cost[e] + pi[head[e]] - pi[tail[e]];
+          if (violation < best_v[k]) {
+            best_v[k] = violation;
+            best_e[k] = e;
+          }
         }
-      }
+
+      auto end_p = std::chrono::steady_clock::now();
+      _all_p += double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_p - start_p)
+                           .count()) /
+                1000;
+      //---------------------------------------------
 
       // Take all negative reduced cost variables
       vnew.clear();
-      for (int k = 0; k < nk; + k)
-        if (best_c[k] > -1) vnew.emplace_back(best_a[k], best_b[k], best_c[k]);
+      for (int k = 0; k < nk; ++k)
+        if (best_e[k] >= 0) {
+          int e = best_e[k];
+          vnew.emplace_back(head[e], tail[e], cost[e], capUB[e]);
+          ARCS[e] = true;
+        }
 
-      if (vnew.empty()) break;
+      if (vnew.empty()) {
+        fprintf(stdout, " no new vars\n");
+        break;
+      }
 
-      std::sort(vnew.begin(), vnew.end(),
-                [](const Var& v, const Var& w) { return v.c > w.c; });
+      // std::sort(vnew.begin(), vnew.end(),
+      //          [](const CapVar& v, const CapVar& w) { return v.c > w.c; });
 
       // Replace old constraints with new ones
-      int new_arcs = simplex.updateArcs(vnew);
+      int new_arcs = simplex.addArcs(vnew);
+      if (new_arcs == 0) break;
 
       _status = simplex.reRun();
     }
@@ -1193,8 +1230,133 @@ class SolverNSC {
     size_t api_it = simplex.iterations();
     double api_time = simplex.runtime();
 
-    fprintf(stdout, "CHECK SOL %.3f ==> %d#%d, it: %d, time: %.3f\n", r, n, m,
-            api_it, api_time);
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    fprintf(stdout,
+            "CHECK SOL %.3f ==> %d#%d, it: %d, alltime: %.3f, simplex: %.3f, "
+            "all_p: %.3f, arcs: %d\n",
+            r, n, m, api_it, _all, api_time, _all_p, simplex.num_arcs());
+
+    return r;
+  }
+
+  // solve the instance by column generation
+  double block_colgen() {
+    auto start_t = std::chrono::steady_clock::now();
+    m = idx;
+
+    std::unordered_set<int> Ks;
+    for (int e = 0; e < m; ++e) Ks.insert(tail[e]);
+    int nk = Ks.size();
+    unordered_map<int, int> M;
+    int vv = 0;
+    for (int u : Ks) {
+      M[u] = vv;
+      ++vv;
+    }
+
+    int NUM_BLOCKS = 2 * n;
+    int block = m / NUM_BLOCKS;
+
+    CapVars vnew;
+    vnew.reserve(NUM_BLOCKS);
+
+    vector<double> best_v(NUM_BLOCKS, 0);
+    vector<int> best_e(NUM_BLOCKS, -1);
+
+    // Dual multipliers
+    vector<double> pi(n, 0);
+
+    // Simplex
+    NetSimplexCapacity simplex('E', n, 0);
+    simplex.setTimelimit(3600);
+    simplex.setOptTolerance(0.0);
+
+    double ART_COST = 0;
+    for (int e = 0; e < m; ++e)
+      if (cost[e] > ART_COST) ART_COST = cost[e];
+    ART_COST = (ART_COST + 1) * n;
+    simplex.setArtCost(ART_COST);
+
+    for (size_t i = 0; i < n; i++) simplex.addNode((int)i, supply[i]);
+
+    ProblemType _status = simplex.run();
+
+    std::vector<bool> ARCS(m, false);
+
+    double _all_p = 0.0;
+
+    while (_status != ProblemType::TIMELIMIT) {
+      // Take the dual values
+      for (int j = 0; j < n; ++j) pi[j] = simplex.potential(j);
+
+      // Solve separation problem:
+      auto start_p = std::chrono::steady_clock::now();
+
+      // To improve this loop ----------------------
+      for (int b = 0; b < NUM_BLOCKS; ++b) {
+        best_v[b] = -0.0;
+        best_e[b] = -1;
+
+        for (int e = b * block, e_max = std::min<int>(m, (b + 1) * block);
+             e < e_max; ++e) {
+          if (!ARCS[e]) {
+            double violation = cost[e] + pi[head[e]] - pi[tail[e]];
+            if (violation < best_v[b]) {
+              best_v[b] = violation;
+              best_e[b] = e;
+            }
+          }
+        }
+      }
+
+      auto end_p = std::chrono::steady_clock::now();
+      _all_p += double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_p - start_p)
+                           .count()) /
+                1000;
+      //---------------------------------------------
+
+      // Take all negative reduced cost variables
+      vnew.clear();
+      for (int b = 0; b < NUM_BLOCKS; ++b)
+        if (best_e[b] > -1) {
+          int e = best_e[b];
+          vnew.emplace_back(head[e], tail[e], cost[e], capUB[e]);
+          ARCS[e] = true;
+        }
+
+      if (vnew.empty()) break;
+
+      // std::sort(vnew.begin(), vnew.end(),
+      //          [](const CapVar& v, const CapVar& w) { return v.c < w.c; });
+
+      // Replace old constraints with new ones
+      int new_arcs = simplex.addArcs(vnew);
+      if (new_arcs == 0) break;
+
+      _status = simplex.reRun();
+    }
+
+    double r = offset_cost + simplex.totalCost();
+
+    size_t api_it = simplex.iterations();
+    double api_time = simplex.runtime();
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    fprintf(stdout,
+            "CHECK SOL %.3f ==> %d#%d, it: %d, alltime: %.3f, simplex: %.3f, "
+            "all_p: %.3f, arcs: %d\n",
+            r, n, m, api_it, _all, api_time, _all_p, simplex.num_arcs());
 
     return r;
   }
@@ -1231,5 +1393,5 @@ class SolverNSC {
   double* capLB;   // one for arcs
   double* capUB;   // one for arcs
   double* supply;  // one for node
-};
+};                 // namespace DOT
 }  // namespace DOT

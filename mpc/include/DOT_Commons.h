@@ -111,6 +111,20 @@ class Var {
 
 typedef std::vector<Var> Vars;
 
+class CapVar {
+ public:
+  int a;     // First point
+  int b;     // Second point
+  double c;  // Cost
+  double d;  // Capacity
+
+  CapVar() : a(0), b(0), c(-1), d(-1) {}
+
+  CapVar(int _a, int _b, double _c, double _d) : a(_a), b(_b), c(_c), d(_d) {}
+};
+
+typedef std::vector<CapVar> CapVars;
+
 // Read a text file and store it in a unique string
 std::string readTextFile(const std::string& filename, size_t& len) {
   // Adapted from: https://github.com/simdjson/simdjson
