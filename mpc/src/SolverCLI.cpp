@@ -16,6 +16,7 @@
 #include "DOT_Lemon.h"
 #include "DOT_NetSimplex.h"
 #include "DOT_Solver.h"
+#include "DOT_Tripartite.h"
 
 // Zeta block for coordinates vector (CUDA
 #define BLOCKSIZE 1024
@@ -370,48 +371,47 @@ int main(int argc, char *argv[]) {
 
     auto start_t = std::chrono::steady_clock::now();
 
-    // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
-    // PA_dense_CD_tract
     solver.parseDIMACS(
-        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense2_SH_tract.net", len);
-    // solver.parseDIMACS(
-    //    "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense_CD_county.net",
-    //    len);
+        "C:\\Users\\Gualandi\\Data\\Districting\\CA_dense3_SH_tract.net", len);
 
     auto end_t = std::chrono::steady_clock::now();
     auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
                            end_t - start_t)
                            .count()) /
                 1000;
+    fprintf(stdout, "parse time: %.3f\n", _all);
 
-    fprintf(stdout, "start solver: %f\n", _all);
-    fflush(stdout);
+    // solver.dump();
+    solver.solve();
+  }
+
+  if (false) {
+    DOT::SolverNSC solver;
+    size_t len = 0;
+
+    solver.parseDIMACS(
+        "C:\\Users\\Gualandi\\Data\\Districting\\CT_dense3_CD_block.net", len);
 
     // solver.dump();
     solver.solve();
   }
 
   if (true) {
-    DOT::SolverNSC solver;
+    DOT::SolverTRI solver;
     size_t len = 0;
 
     auto start_t = std::chrono::steady_clock::now();
 
-    // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
-    // PA_dense_CD_tract
-    solver.parseDIMACS(
-        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense2_SH_tract.net", len);
+    solver.parseDIMACSTRI(
+        "C:\\Users\\Gualandi\\Data\\Districting\\CA_dense3_SH_tract.net", len);
 
     auto end_t = std::chrono::steady_clock::now();
     auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
                            end_t - start_t)
                            .count()) /
                 1000;
+    fprintf(stdout, "parse time: %.3f\n", _all);
 
-    fprintf(stdout, "start solver: %f\n", _all);
-    fflush(stdout);
-
-    // solver.dump();
     solver.block_colgen();
   }
 
@@ -424,7 +424,7 @@ int main(int argc, char *argv[]) {
     // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
     // PA_dense_CD_tract
     parseDIMACS(
-        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense2_SH_tract.net", len,
+        "C:\\Users\\Gualandi\\Data\\Districting\\CA_dense3_SH_tract.net", len,
         solver);
 
     auto end_t = std::chrono::steady_clock::now();

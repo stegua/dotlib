@@ -161,7 +161,7 @@ class SolverCoinLemon {
   double solve(const std::string& msg = "") {
     auto start_t = std::chrono::steady_clock::now();
 
-    LemonSimplex simplex(G, false);
+    LemonSimplex simplex(G, true);
 
     // lower and upper bounds, cost
     LemonGraph::ArcMap<LimitValueType> l_i(G), u_i(G);
@@ -211,7 +211,7 @@ class SolverCoinLemon {
     double _iterations = 0;
 
     fprintf(stdout,
-            "LEM-PLEX %s it %d UB %.6f runtime %.4f simplex %.4f "
+            "LEM-PLEX %s it %d UB %.f runtime %.4f simplex %.4f "
             "num_arcs %d\n",
             msg.c_str(), (int)_iterations, objval, _all, _all, (int)m);
 
