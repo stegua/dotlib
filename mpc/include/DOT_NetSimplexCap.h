@@ -310,7 +310,7 @@ class NetSimplexCapacity {
     _block_size = std::max(int(BLOCK_SIZE_FACTOR * sqrt(_arc_num - _dummy_arc)),
                            MIN_BLOCK_SIZE);
 
-    _next_arc = _dummy_arc;
+    // _next_arc = _dummy_arc;
 
     return start();
   }
@@ -491,7 +491,7 @@ class NetSimplexCapacity {
   }
 
   // Pricing startegy
-  const double BLOCK_SIZE_FACTOR = 2;
+  const double BLOCK_SIZE_FACTOR = 1;
   const int MIN_BLOCK_SIZE = 10;
   int _block_size;
 
@@ -508,7 +508,7 @@ class NetSimplexCapacity {
       e_max = std::min(_arc_num, e + _block_size);
 
       if (min < _opt_tolerance) {
-        _next_arc = in_arc;
+        _next_arc = e_max;
         return true;
       }
     }
@@ -524,7 +524,7 @@ class NetSimplexCapacity {
       e_max = std::min(_next_arc, e + _block_size);
 
       if (min < _opt_tolerance) {
-        _next_arc = in_arc;
+        _next_arc = e_max;
         return true;
       }
     }
@@ -947,15 +947,15 @@ class NetSimplexCapacity {
   ProblemType start(void) {
     auto start_tt = std::chrono::steady_clock::now();
 
-    BlockSearchPivotRule pivot(*this);
+    //    BlockSearchPivotRule pivot(*this);
 
     // Perform heuristic initial pivots
     // if (!initialPivots()) return ProblemType::UNBOUNDED;
 
     // Execute the Network Simplex algorithm
     while (true) {
-      bool stop = pivot.findEnteringArc();
-      // bool stop = pricing();
+      // bool stop = pivot.findEnteringArc();
+      bool stop = pricing();
       if (!stop) break;
 
       // dumpTable();

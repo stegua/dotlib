@@ -372,7 +372,7 @@ int main(int argc, char *argv[]) {
     auto start_t = std::chrono::steady_clock::now();
 
     solver.parseDIMACS(
-        "C:\\Users\\Gualandi\\Data\\Districting\\CA_dense3_SH_tract.net", len);
+        "C:\\Users\\Gualandi\\Data\\Districting\\WV_dense3_CD_tract.net", len);
 
     auto end_t = std::chrono::steady_clock::now();
     auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
     auto start_t = std::chrono::steady_clock::now();
 
     solver.parseDIMACSTRI(
-        "C:\\Users\\Gualandi\\Data\\Districting\\CA_dense3_SH_tract.net", len);
+        "C:\\Users\\Gualandi\\Data\\Districting\\WV_dense3_CD_tract.net", len);
 
     auto end_t = std::chrono::steady_clock::now();
     auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -415,7 +415,7 @@ int main(int argc, char *argv[]) {
     solver.block_colgen();
   }
 
-  if (true) {
+  if (false) {
     DOT::SolverCplex solver;
     size_t len = 0;
 
@@ -424,7 +424,7 @@ int main(int argc, char *argv[]) {
     // PA_dense_SS_tract. PA_dense_CD_county, PA_dense_SS_county,
     // PA_dense_CD_tract
     parseDIMACS(
-        "C:\\Users\\Gualandi\\Data\\Districting\\CA_dense3_SH_tract.net", len,
+        "C:\\Users\\Gualandi\\Data\\Districting\\PA_dense3_CD_block.net", len,
         solver);
 
     auto end_t = std::chrono::steady_clock::now();
