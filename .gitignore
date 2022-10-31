@@ -78,3 +78,6 @@ msvc/DOTLib/.vs/DOTLib/v15/Browse.VC.db
 /mpc/msvc/NetCplex/.vs/NetCplex/v15
 *.log
 *.pdb
+/mpc/python/color-1024.net
+/mpc/python/color-4096.net
+/mpc/python/color-transfer.zip
