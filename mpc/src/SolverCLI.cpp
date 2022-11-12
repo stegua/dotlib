@@ -16,6 +16,7 @@
 #include "DOT_Lemon.h"
 #include "DOT_NetSimplex.h"
 #include "DOT_Solver.h"
+#include "DOT_SolverTripartite.h"
 #include "DOT_Tripartite.h"
 
 // Zeta block for coordinates vector (CUDA
@@ -691,7 +692,8 @@ int main(int argc, char *argv[]) {
     solver.bipartiteCplex(a, b, msg);
   }
 
-  if (true) {
+  // Test bipartite
+  if (false) {
     std::string SEP = "\\";
 
     std::string base =
@@ -699,13 +701,17 @@ int main(int argc, char *argv[]) {
         "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
 
     std::vector<std::string> dirs = {
-        "ClassicImages", "Shapes",           "WhiteNoise", "CauchyDensity",
-        "GRFmoderate",   "MicroscopyImages", "GRFrough",   "GRFsmooth",
-        "LogGRF",        "LogitGRF"};
+        "ClassicImages",
+        //"Shapes",           "WhiteNoise", "CauchyDensity",
+        //"GRFmoderate",   "MicroscopyImages", "GRFrough",   "GRFsmooth",
+        //"LogGRF",        "LogitGRF"
+    };
 
     std::vector<std::string> Fs = {
-        "1001.csv", "1002.csv", "1003.csv", "1004.csv", "1005.csv",
-        "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"};
+        "1001.csv", "1002.csv",
+        //"1003.csv", "1004.csv", "1005.csv",
+        // "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"
+    };
 
     std::vector<std::string> Ss = {"32", "64"};
     // , "256", "512"
@@ -732,6 +738,7 @@ int main(int argc, char *argv[]) {
               std::string msg = dtype + " " + f11 + " " + f22;
 
               DOT::Solver solver;
+              DOT::SolverTripartite tripartite;
               // solver.init_coprimes(31, atoi(S.c_str()));
 
               // for (int tau : {1,  5,  10, 15, 20, 25,   30, 35, 40, 45,
@@ -754,8 +761,8 @@ int main(int argc, char *argv[]) {
               // stat[0] += solver.bipartiteLemon(a, b, msg);
               // stat[1] += solver.bipartiteGurobi(a, b, msg, 1);
               // stat[1] += solver.bipartiteCplex(a, b, msg);
-              stat[0] += solver.bipartiteGurobi(a, b, msg, 3);
-              // stat[3] += solver.bipartiteColgen(a, b, msg);
+              // stat[0] += solver.bipartiteGurobi(a, b, msg, 3);
+              stat[1] += tripartite.gurobi(a, b, msg, 3);
 
               DOT::logger.flush();
             }
@@ -763,6 +770,94 @@ int main(int argc, char *argv[]) {
         DOT::logger.info(
             "N: %s, %s, GuorbiNS: %.4f\tEapi: %.4f\tEati: %.4f\tCG+eati: %.4f",
             S.c_str(), dtype.c_str(), stat[0], stat[1], stat[2], stat[3]);
+
+        DOT::logger.info(
+            "N: %s, %s, Eapi: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f",
+            S.c_str(), dtype.c_str(), eapi[0], eapi[1], eapi[2], eapi[3]);
+
+        DOT::logger.info(
+            "N: %s, %s, Eati: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f",
+            S.c_str(), dtype.c_str(), eati[0], eati[1], eati[2], eati[3]);
+
+        fflush(stdout);
+      }
+    }
+  }
+
+  // Test tripartite
+  if (true) {
+    std::string SEP = "\\";
+
+    std::string base =
+        "C:\\Users\\Gualandi\\Google "
+        "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
+
+    std::vector<std::string> dirs = {
+        "ClassicImages", "Shapes",           "WhiteNoise", "CauchyDensity",
+        "GRFmoderate",   "MicroscopyImages", "GRFrough",   "GRFsmooth",
+        "LogGRF",        "LogitGRF"};
+
+    std::vector<std::string> Fs = {
+        "1001.csv", "1002.csv", "1003.csv", "1004.csv", "1005.csv",
+        "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"};
+
+    std::vector<std::string> Ss = {"32", "64"};
+    // , "256", "512"
+
+    DOT::logger.setFileStream("all.tripartite.log");
+
+    for (const auto &S : Ss) {
+      for (const auto &dtype : dirs) {
+        std::array<double, 8> stat = {0, 0, 0, 0};
+        std::array<double, 4> eapi = {0, 0, 0, 0};
+        std::array<double, 4> eati = {0, 0, 0, 0};
+        for (const auto &f11 : Fs) {
+          for (const auto &f22 : Fs)
+            if (f11 < f22) {
+              DOT::Histogram2D a;
+              DOT::Histogram2D b;
+
+              std::string f1 = "data" + S + "_" + f11;
+              std::string f2 = "data" + S + "_" + f22;
+
+              a.parse(base + dtype + SEP + f1);
+              b.parse(base + dtype + SEP + f2);
+
+              std::string msg = dtype + " " + f11 + " " + f22;
+
+              DOT::SolverTripartite tripartite;
+
+              stat[0] += tripartite.gurobi(a, b, msg, 1);
+              stat[1] += tripartite.gurobi(a, b, msg, 2);
+              stat[2] += tripartite.gurobi(a, b, msg, 3);
+
+              stat[3] += tripartite.cplex(a, b, msg);
+              stat[4] += tripartite.lemon(a, b, msg);
+
+              std::array<double, 4> times = tripartite.eati(a, b, msg);
+              eati[0] += times[0];
+              eati[1] += times[1];
+              eati[2] += times[2];
+              eati[3] += times[3];
+              stat[5] += times[0];
+
+              times = tripartite.eapi(a, b, msg);
+              eapi[0] += times[0];
+              eapi[1] += times[1];
+              eapi[2] += times[2];
+              eapi[3] += times[3];
+              stat[6] += times[0];
+
+              stat[7] += tripartite.colgen(a, b, msg);
+
+              DOT::logger.flush();
+            }
+        }
+        DOT::logger.info(
+            "N: %s, %s, GrbDual: %.4f\tGrbBarr: %.4f\tGrbNetS: %.4f\tCplexNS: "
+            "%.4f\tLemon: %.4f\tEati: %.4f\tEapi: %.4f\tColegn: %.4f",
+            S.c_str(), dtype.c_str(), stat[0], stat[1], stat[2], stat[3],
+            stat[4], stat[5], stat[6], stat[7]);
 
         DOT::logger.info(
             "N: %s, %s, Eapi: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f",

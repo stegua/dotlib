@@ -1005,7 +1005,7 @@ class Solver {
         "num_arcs %d",
         msg.c_str(), (int)_iterations, fobj, _all, _runtime, (int)_num_arcs);
 
-    return _all;
+    return fobj;
   }
 
   //--------------------------------------------------------------------------

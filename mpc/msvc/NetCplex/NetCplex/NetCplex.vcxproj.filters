@@ -58,5 +58,8 @@
     <ClInclude Include="..\..\..\include\DOT_Gurobi.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_SolverTripartite.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
