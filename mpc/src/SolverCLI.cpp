@@ -365,7 +365,7 @@ int main(int argc, char *argv[]) {
 
   std::uniform_int_distribution<> Uniform1N(1, n);
 
-  if (true) {
+  if (false) {
     DOT::SolverCoinLemon solver;
     size_t len = 0;
 
@@ -396,7 +396,7 @@ int main(int argc, char *argv[]) {
     solver.solve();
   }
 
-  if (true) {
+  if (false) {
     DOT::SolverTRI solver;
     size_t len = 0;
 
@@ -686,13 +686,12 @@ int main(int argc, char *argv[]) {
 
     DOT::Solver solver;
     solver.init_coprimes(31, 32);
-    // solver.tripartiteColgen(a, b);
     solver.bipartiteEapi(a, b, msg);
     solver.bipartiteEati(a, b, msg);
     solver.bipartiteCplex(a, b, msg);
   }
 
-  if (false) {
+  if (true) {
     std::string SEP = "\\";
 
     std::string base =
@@ -700,23 +699,24 @@ int main(int argc, char *argv[]) {
         "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
 
     std::vector<std::string> dirs = {
-        "ClassicImages",  //"Shapes"
-        //"WhiteNoise", "CauchyDensity", "GRFmoderate","MicroscopyImages",
-        //"GRFrough", "GRFsmooth", "LogGRF", "LogitGRF",,
-    };
+        "ClassicImages", "Shapes",           "WhiteNoise", "CauchyDensity",
+        "GRFmoderate",   "MicroscopyImages", "GRFrough",   "GRFsmooth",
+        "LogGRF",        "LogitGRF"};
 
     std::vector<std::string> Fs = {
         "1001.csv", "1002.csv", "1003.csv", "1004.csv", "1005.csv",
         "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"};
 
-    std::vector<std::string> Ss = {"128"};
-    //, "64", "128", "256", "512"};
-    std::array<double, 4> stat = {0, 0, 0, 0};
-    std::array<double, 4> eapi = {0, 0, 0, 0};
-    std::array<double, 4> eati = {0, 0, 0, 0};
+    std::vector<std::string> Ss = {"32", "64"};
+    // , "256", "512"
 
-    for (const auto &dtype : dirs) {
-      for (const auto &S : Ss) {
+    DOT::logger.setFileStream("grb.bipartite.log");
+
+    for (const auto &S : Ss) {
+      for (const auto &dtype : dirs) {
+        std::array<double, 4> stat = {0, 0, 0, 0};
+        std::array<double, 4> eapi = {0, 0, 0, 0};
+        std::array<double, 4> eati = {0, 0, 0, 0};
         for (const auto &f11 : Fs) {
           for (const auto &f22 : Fs)
             if (f11 < f22) {
@@ -734,40 +734,47 @@ int main(int argc, char *argv[]) {
               DOT::Solver solver;
               // solver.init_coprimes(31, atoi(S.c_str()));
 
-              // for (int tau : {1,  5,  10, 15, 20, 25, 30, 35, 40, 45,
+              // for (int tau : {1,  5,  10, 15, 20, 25,   30, 35, 40, 45,
               //                50, 55, 60, 65, 70, 75, 80, 85, 95, 100})
 
-              std::array<double, 4> times = solver.bipartiteEati(a, b, msg);
+              std::array<double, 4> times;  //= solver.bipartiteEati(a, b, msg);
               eati[0] += times[0];
               eati[1] += times[1];
               eati[2] += times[2];
               eati[3] += times[3];
               stat[2] += times[0];
 
-              times = solver.bipartiteEapi(a, b, msg);
+              // times = solver.bipartiteEapi(a, b, msg);
               eapi[0] += times[0];
               eapi[1] += times[1];
               eapi[2] += times[2];
               eapi[3] += times[3];
               stat[1] += times[0];
 
-              stat[0] += solver.bipartiteCplex(a, b, msg);
+              // stat[0] += solver.bipartiteLemon(a, b, msg);
+              // stat[1] += solver.bipartiteGurobi(a, b, msg, 1);
+              // stat[1] += solver.bipartiteCplex(a, b, msg);
+              stat[0] += solver.bipartiteGurobi(a, b, msg, 3);
+              // stat[3] += solver.bipartiteColgen(a, b, msg);
 
-              stat[3] += solver.colgen(a, b, msg);
-              fprintf(stdout, "\n");
+              DOT::logger.flush();
             }
         }
+        DOT::logger.info(
+            "N: %s, %s, GuorbiNS: %.4f\tEapi: %.4f\tEati: %.4f\tCG+eati: %.4f",
+            S.c_str(), dtype.c_str(), stat[0], stat[1], stat[2], stat[3]);
+
+        DOT::logger.info(
+            "N: %s, %s, Eapi: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f",
+            S.c_str(), dtype.c_str(), eapi[0], eapi[1], eapi[2], eapi[3]);
+
+        DOT::logger.info(
+            "N: %s, %s, Eati: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f",
+            S.c_str(), dtype.c_str(), eati[0], eati[1], eati[2], eati[3]);
+
+        fflush(stdout);
       }
     }
-
-    fprintf(stdout, "Cplex: %.4f\tEapi: %.4f\tEati: %.4f\tCG+eati: %.4f\n",
-            stat[0], stat[1], stat[2], stat[3]);
-
-    fprintf(stdout, "Eapi: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f\n",
-            eapi[0], eapi[1], eapi[2], eapi[3]);
-
-    fprintf(stdout, "Eati: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f\n",
-            eati[0], eati[1], eati[2], eati[3]);
   }
 
   if (false) {

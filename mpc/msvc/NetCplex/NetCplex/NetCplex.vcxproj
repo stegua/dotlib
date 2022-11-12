@@ -78,13 +78,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\DevLIBs\lemon\lemon-1.3.1;C:\Users\gualandi\Documents\GitHub\dotlib\mpc\include;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\lib\x64_windows_msvc14\stat_mda;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\gurobi1000\win64\include;$(SolutionDir)..\..\..\externs;C:\DevLIBs\lemon\lemon-1.3.1;C:\Users\gualandi\Documents\GitHub\dotlib\mpc\include;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\gurobi1000\win64\lib;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\lib\x64_windows_msvc14\stat_mda;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\DevLIBs\lemon\lemon-1.3.1;C:\Users\gualandi\Documents\GitHub\dotlib\mpc\include;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\lib\x64_windows_msvc14\stat_mda;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\gurobi1000\win64\include;$(SolutionDir)..\..\..\externs;C:\DevLIBs\lemon\lemon-1.3.1;C:\Users\gualandi\Documents\GitHub\dotlib\mpc\include;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\gurobi1000\win64\lib;C:\Program Files\IBM\ILOG\CPLEX_Studio201\cplex\lib\x64_windows_msvc14\stat_mda;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -125,7 +125,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>cplex2010.lib;ilocplex.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cplex2010.lib;ilocplex.lib;gurobi100.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -146,7 +146,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>cplex2010.lib;ilocplex.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cplex2010.lib;ilocplex.lib;gurobi100.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -158,6 +158,7 @@
     <ClInclude Include="..\..\..\include\DOT_Cplex.h" />
     <ClInclude Include="..\..\..\include\DOT_Cuda.h" />
     <ClInclude Include="..\..\..\include\DOT_EapiSimplex.h" />
+    <ClInclude Include="..\..\..\include\DOT_Gurobi.h" />
     <ClInclude Include="..\..\..\include\DOT_Histogram2D.h" />
     <ClInclude Include="..\..\..\include\DOT_Lemon.h" />
     <ClInclude Include="..\..\..\include\DOT_NetSimplex.h" />

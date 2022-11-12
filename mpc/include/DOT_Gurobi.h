@@ -12,17 +12,19 @@
 
 #include "DOT_Commons.h"
 
-// Cplex Network Simplex
-#include <ilcplex/cplex.h>
+// Gurobi Simplex
+extern "C" {
+#include "gurobi_c.h"
+}
 
 namespace DOT {
 
-class SolverCplex {
+class SolverGurobi {
  public:
-  SolverCplex(void) {}
+  SolverGurobi(void) {}
 
   // Free all pointers
-  ~SolverCplex(void) {
+  ~SolverGurobi(void) {
     if (!arcs) {
       fprintf(stderr, "KA BOOM!\n");
       return;
@@ -83,50 +85,32 @@ class SolverCplex {
     auto start_t = std::chrono::steady_clock::now();
 
     // Start CPLEX definition
-    CPXENVptr env = NULL;
-    CPXNETptr net = NULL;
+    GRBenv* env = NULL;
+    GRBmodel* model = NULL;
     int status = 0;
 
-    env = CPXopenCPLEX(&status);
+    GRBloadenv(&env, NULL);
+    GRBsetintparam(env, GRB_INT_PAR_OUTPUTFLAG, 0);
+    GRBsetintparam(env, GRB_INT_PAR_METHOD, GRB_METHOD_DUAL);
+    GRBsetdblparam(env, GRB_DBL_PAR_FEASIBILITYTOL, 1e-09);
+    GRBsetdblparam(env, GRB_DBL_PAR_OPTIMALITYTOL, 1e-09);
 
-    if (env == NULL) {
-      char errmsg[CPXMESSAGEBUFSIZE];
-      fprintf(stderr, "Could not open CPLEX environment.\n");
-      CPXgeterrorstring(env, status, errmsg);
-      fprintf(stderr, "%s", errmsg);
-      return -1;
-    }
+    // Arrays for passing data to Gurobi
+    char* le = (char*)malloc(sizeof(char) * (n + 1));
+    int* ind = (int*)malloc(sizeof(int) * (n + 1));
+    double* val = (double*)malloc(sizeof(double) * (n + 1));
+    double* xbar = (double*)malloc(sizeof(double) * m);
+    double* pert = (double*)malloc(sizeof(double) * n);
 
-    CPXsetintparam(env, CPXPARAM_ScreenOutput, CPX_OFF);
-    CPXsetdblparam(env, CPXPARAM_Network_Tolerances_Feasibility, 1e-09);
-    CPXsetdblparam(env, CPXPARAM_Network_Tolerances_Optimality, 1e-09);
+    // Variables and objective function
+    GRBnewmodel(env, &model, "ot", m, cost, NULL, NULL, NULL, NULL);
 
-    net = CPXNETcreateprob(env, &status, "netCplex");
-
-    if (net == NULL) {
-      fprintf(stderr, "Failed to create network object.\n");
-      fflush(stderr);
-      exit(-1);
-    }
-    // Build Network instance
-    CPXNETchgobjsen(env, net, CPX_MIN);
-
-    // Add all nodes
-    CPXNETaddnodes(env, net, (int)n, supply, NULL);
-
-    // Add all arcs
-    vector<int> _tail(m, 0);
-    vector<int> _head(m, 0);
-    for (int e = 0; e < m; ++e) {
-      _head[e] = head[e];
-      _tail[e] = tail[e];
-    }
-
-    CPXNETaddarcs(env, net, m, &_tail[0], &_head[0], capLB, capUB, cost, NULL);
+    // Add constraints
+    //    for (int i = 0; i < n; i++)
 
     // Solve problem
     auto start = std::chrono::steady_clock::now();
-    status = CPXNETprimopt(env, net);
+    status = GRBoptimize(model);
     auto end = std::chrono::steady_clock::now();
     auto _runtime =
         double(
@@ -140,49 +124,10 @@ class SolverCplex {
       exit(-1);
     }
 
-    int solstat = CPXNETgetstat(env, net);
-
-    if (solstat != CPX_STAT_OPTIMAL) {
-      fprintf(stdout, "ERROR: Cplex status: %d\n", solstat);
-      exit(-1);
-    }
-
-    double objval = 0.0;
-    CPXNETgetobjval(env, net, &objval);
-
-    int _iterations = CPXNETgetitcnt(env, net);
-
-    /* Free up the problem as allocated by CPXNETcreateprob, if necessary */
-    if (net != NULL) {
-      status = CPXNETfreeprob(env, &net);
-      if (status) {
-        fprintf(stderr, "CPXNETfreeprob failed, error code %d.\n", status);
-      }
-    }
-
-    /* Free up the CPLEX environment, if necessary */
-    if (env != NULL) {
-      status = CPXcloseCPLEX(&env);
-
-      if (status) {
-        char errmsg[CPXMESSAGEBUFSIZE];
-        fprintf(stderr, "Could not close CPLEX environment.\n");
-        CPXgeterrorstring(env, status, errmsg);
-        fprintf(stderr, "%s", errmsg);
-      }
-    }
-
-    // Merge with previous code
-    auto end_t = std::chrono::steady_clock::now();
-    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
-                           end_t - start_t)
-                           .count()) /
-                1000;
-
-    fprintf(stdout,
-            "BIP-PLEX %s it %d UB %.6f runtime %.4f simplex %.4f "
-            "num_arcs %d\n",
-            msg.c_str(), (int)_iterations, objval, _all, _runtime, (int)m);
+    // fprintf(stdout,
+    //        "BIP-GURO %s it %d UB %.6f runtime %.4f simplex %.4f "
+    //        "num_arcs %d\n",
+    //        msg.c_str(), (int)_iterations, objval, _all, _runtime, (int)m);
 
     return _all;
   }
@@ -219,7 +164,7 @@ class SolverCplex {
 };
 
 void parseDIMACS(const std::string filename, size_t& len,
-                 SolverCplex& solver) noexcept {
+                 SolverGurobi& solver) noexcept {
   /* EXAMPLE of DIMACS file from Austin:
      p min 86 1223
      n 1 13002700

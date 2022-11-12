@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <ilcplex/cplex.h>
+
 #include <algorithm>
 #include <numeric>
 
@@ -16,8 +18,16 @@
 #include "DOT_NetSimplex.h"
 #include "DOT_NetSimplexUnit.h"
 
-// Adde preprocessing directive
-#include <ilcplex/cplex.h>
+#define LEMON_ONLY_TEMPLATES
+#include <lemon/list_graph.h>
+#include <lemon/network_simplex.h>
+
+// Gurobi Simplex
+extern "C" {
+#include "gurobi_c.h"
+}
+
+#include "yocta_logger.hh"
 
 const double SCALE = 10000.0;
 
@@ -106,6 +116,7 @@ struct hash<std::pair<int, int>> {
 #define BLOCKNUM 8
 
 namespace DOT {
+yocta::Logger logger;
 
 // Solver class, which wrapper the Network Simplex algorithm
 class Solver {
@@ -299,117 +310,6 @@ class Solver {
             simplex._time_update_duals};
   }
 
-  //--------------------------------------------------------------------------
-  std::array<double, 4> bipartiteEapi(const Histogram2D &A,
-                                      const Histogram2D &B,
-                                      const std::string &msg = "") {
-    auto start_t = std::chrono::steady_clock::now();
-
-    int n = A.getN();
-
-    // Build the graph for min cost flow
-    EapiSimplex simplex(static_cast<int>(2 * n * n),
-                        static_cast<int>(n * n) * static_cast<int>(n * n));
-
-    auto ID = [&n](int x, int y) { return x * n + y; };
-
-    // add first d source nodes
-    for (int i = 0; i < n; ++i)
-      for (int j = 0; j < n; ++j) simplex.addNode(ID(i, j), A.get(i, j));
-
-    for (int i = 0; i < n; ++i)
-      for (int j = 0; j < n; ++j)
-        simplex.addNode(n * n + ID(i, j), -B.get(i, j));
-
-    for (int i = 0; i < n; ++i)
-      for (int j = 0; j < n; ++j)
-        for (int v = 0; v < n; ++v)
-          for (int w = 0; w < n; ++w)
-            simplex.addArc(ID(i, j), n * n + ID(v, w),
-                           (i - v) * (i - v) + (w - j) * (w - j));
-
-    // Init the simplex
-    double r = simplex.solve();
-    _iterations = (int)simplex.iterations();
-    _runtime = simplex.runtime();
-    _num_arcs = simplex.M - simplex.M0;
-
-    auto end_t = std::chrono::steady_clock::now();
-    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
-                           end_t - start_t)
-                           .count()) /
-                1000;
-
-    double fobj = r / double(A.balance());
-
-    PRINT(
-        "BIP-EAPI %s it %d UB %.6f runtime %.4f simplex %.4f "
-        "num_arcs %d\n",
-        msg.c_str(), (int)_iterations, fobj, _all, _runtime, (int)_num_arcs);
-
-    return {_runtime, simplex._time_pricing, simplex._time_update_basis,
-            simplex._time_update_duals};
-  }
-
-  //--------------------------------------------------------------------------
-  std::array<double, 4> bipartiteEati(const Histogram2D &A,
-                                      const Histogram2D &B,
-                                      const std::string &msg = "") {
-    auto start_t = std::chrono::steady_clock::now();
-
-    int n = A.getN();
-
-    // Build the graph for min cost flow
-    NetSimplex simplex('F', static_cast<int>(2 * n * n),
-                       static_cast<int>(n * n) * static_cast<int>(n * n));
-
-    // Set the parameters
-    simplex.setTimelimit(timelimit);
-    simplex.setVerbosity(verbosity);
-    simplex.setOptTolerance(0);
-
-    auto ID = [&n](int x, int y) { return x * n + y; };
-
-    // add first d source nodes
-    for (int i = 0; i < n; ++i)
-      for (int j = 0; j < n; ++j) simplex.addNode(ID(i, j), A.get(i, j));
-
-    for (int i = 0; i < n; ++i)
-      for (int j = 0; j < n; ++j)
-        simplex.addNode(n * n + ID(i, j), -B.get(i, j));
-
-    for (int i = 0; i < n; ++i)
-      for (int j = 0; j < n; ++j)
-        for (int v = 0; v < n; ++v)
-          for (int w = 0; w < n; ++w)
-            simplex.addArc(ID(i, j), n * n + ID(v, w),
-                           (i - v) * (i - v) + (w - j) * (w - j));
-
-    // Init the simplex
-    simplex.run();
-
-    _runtime = simplex.runtime();
-    _iterations = simplex.iterations();
-    _num_arcs = simplex.num_arcs();
-
-    auto end_t = std::chrono::steady_clock::now();
-    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
-                           end_t - start_t)
-                           .count()) /
-                1000;
-
-    double fobj = simplex.totalCost() / A.balance();
-
-    PRINT(
-        "BIP-EATI %s it %d UB %.6f runtime %.4f simplex %.4f "
-        "num_arcs %d\n",
-        msg.c_str(), (int)_iterations, fobj, _all, _runtime, (int)_num_arcs);
-
-    return {_runtime, simplex._time_pricing, simplex._time_update_basis,
-            simplex._time_update_duals};
-    ;
-  }
-
   //----------------------------------------------------------------------------------------
   // Compute Kantorovich-Wasserstein distance between two measures
   double cplexNetSimplex(const Histogram2D &A, const Histogram2D &B,
@@ -533,12 +433,123 @@ class Solver {
                 1000;
     _num_arcs = m;
 
-    PRINT(
+    DOT::logger.info(
         "NETCPLEX %s it %d UB %.6f runtime %.4f simplex %.4f "
-        "num_arcs %d\n",
+        "num_arcs %d",
         msg.c_str(), (int)_iterations, objval, _all, _runtime, (int)_num_arcs);
 
     return _all;
+  }
+
+  //--------------------------------------------------------------------------
+  std::array<double, 4> bipartiteEapi(const Histogram2D &A,
+                                      const Histogram2D &B,
+                                      const std::string &msg = "") {
+    auto start_t = std::chrono::steady_clock::now();
+
+    int n = A.getN();
+
+    // Build the graph for min cost flow
+    EapiSimplex simplex(static_cast<int>(2 * n * n),
+                        static_cast<int>(n * n) * static_cast<int>(n * n));
+
+    auto ID = [&n](int x, int y) { return x * n + y; };
+
+    // add first d source nodes
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) simplex.addNode(ID(i, j), A.get(i, j));
+
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
+        simplex.addNode(n * n + ID(i, j), -B.get(i, j));
+
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
+        for (int v = 0; v < n; ++v)
+          for (int w = 0; w < n; ++w)
+            simplex.addArc(ID(i, j), n * n + ID(v, w),
+                           (i - v) * (i - v) + (w - j) * (w - j));
+
+    // Init the simplex
+    double r = simplex.solve();
+    _iterations = (int)simplex.iterations();
+    _runtime = simplex.runtime();
+    _num_arcs = simplex.M - simplex.M0;
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    double fobj = r / double(A.balance());
+
+    DOT::logger.info(
+        "BIP-EAPI %s it %d UB %.6f runtime %.4f simplex %.4f "
+        "num_arcs %d",
+        msg.c_str(), (int)_iterations, fobj, _all, _runtime, (int)_num_arcs);
+
+    return {_runtime, simplex._time_pricing, simplex._time_update_basis,
+            simplex._time_update_duals};
+  }
+
+  //--------------------------------------------------------------------------
+  std::array<double, 4> bipartiteEati(const Histogram2D &A,
+                                      const Histogram2D &B,
+                                      const std::string &msg = "") {
+    auto start_t = std::chrono::steady_clock::now();
+
+    int n = A.getN();
+
+    // Build the graph for min cost flow
+    NetSimplex simplex('F', static_cast<int>(2 * n * n),
+                       static_cast<int>(n * n) * static_cast<int>(n * n));
+
+    // Set the parameters
+    simplex.setTimelimit(timelimit);
+    simplex.setVerbosity(verbosity);
+    simplex.setOptTolerance(0);
+
+    auto ID = [&n](int x, int y) { return x * n + y; };
+
+    // add first d source nodes
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) simplex.addNode(ID(i, j), A.get(i, j));
+
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
+        simplex.addNode(n * n + ID(i, j), -B.get(i, j));
+
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
+        for (int v = 0; v < n; ++v)
+          for (int w = 0; w < n; ++w)
+            simplex.addArc(ID(i, j), n * n + ID(v, w),
+                           (i - v) * (i - v) + (w - j) * (w - j));
+
+    // Init the simplex
+    simplex.run();
+
+    _runtime = simplex.runtime();
+    _iterations = simplex.iterations();
+    _num_arcs = simplex.num_arcs();
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    double fobj = simplex.totalCost() / A.balance();
+
+    DOT::logger.info(
+        "BIP-EATI %s it %d UB %.6f runtime %.4f simplex %.4f "
+        "num_arcs %d",
+        msg.c_str(), (int)_iterations, fobj, _all, _runtime, (int)_num_arcs);
+
+    return {_runtime, simplex._time_pricing, simplex._time_update_basis,
+            simplex._time_update_duals};
+    ;
   }
 
   double bipartiteCplex(const Histogram2D &A, const Histogram2D &B,
@@ -659,16 +670,127 @@ class Solver {
                 1000;
     _num_arcs = m;
 
-    PRINT(
+    DOT::logger.info(
         "BIP-PLEX %s it %d UB %.6f runtime %.4f simplex %.4f "
-        "num_arcs %d\n",
+        "num_arcs %d",
         msg.c_str(), (int)_iterations, objval, _all, _runtime, (int)_num_arcs);
 
     return _all;
   }
 
-  double colgen(const Histogram2D &A, const Histogram2D &B,
-                const std::string &msg) {
+  double bipartiteGurobi(const Histogram2D &A, const Histogram2D &B,
+                         const std::string &msg = "", int method = 1) {
+    // Init coprimes data structure
+    int n = A.getN();
+
+    auto start_t = std::chrono::steady_clock::now();
+
+    GRBenv *env = NULL;
+    GRBmodel *model = NULL;
+    int status = 0;
+
+    GRBloadenv(&env, NULL);
+    GRBsetintparam(env, GRB_INT_PAR_OUTPUTFLAG, 0);
+    if (method == 1) GRBsetintparam(env, GRB_INT_PAR_METHOD, GRB_METHOD_DUAL);
+    if (method == 2) {
+      GRBsetintparam(env, GRB_INT_PAR_CROSSOVER, 0);
+      GRBsetintparam(env, GRB_INT_PAR_METHOD, GRB_METHOD_BARRIER);
+    }
+    if (method == 3) GRBsetintparam(env, GRB_INT_PAR_NETWORKALG, 1);
+
+    // GRBsetdblparam(env, GRB_DBL_PAR_FEASIBILITYTOL, 1e-09);
+    // GRBsetdblparam(env, GRB_DBL_PAR_OPTIMALITYTOL, 1e-09);
+
+    auto ID = [&n](int x, int y) { return x * n + y; };
+
+    vector<double> obj;
+
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
+        for (int v = 0; v < n; ++v)
+          for (int w = 0; w < n; ++w) {
+            obj.push_back((i - v) * (i - v) + (w - j) * (w - j));
+          }
+
+    int m = (int)obj.size();
+
+    // Variables and objective function
+    GRBnewmodel(env, &model, "ot", m, &obj[0], NULL, NULL, NULL, NULL);
+
+    // Add constraints
+    vector<double> val(n * n, 1.0);
+    vector<int> ind;
+    ind.reserve(n * n);
+
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) {
+        ind.clear();
+        for (int v = 0; v < n; ++v)
+          for (int w = 0; w < n; ++w)
+            ind.push_back(ID(i, j) * n * n + ID(v, w));
+
+        GRBaddconstr(model, n * n, &ind[0], &val[0], GRB_EQUAL, A.get(i, j),
+                     NULL);
+      }
+
+    for (int v = 0; v < n; ++v)
+      for (int w = 0; w < n; ++w) {
+        ind.clear();
+        for (int i = 0; i < n; ++i)
+          for (int j = 0; j < n; ++j)
+            ind.push_back(ID(i, j) * n * n + ID(v, w));
+
+        GRBaddconstr(model, n * n, &ind[0], &val[0], GRB_EQUAL, B.get(v, w),
+                     NULL);
+      }
+
+    // Solve problem
+    auto start = std::chrono::steady_clock::now();
+    status = GRBoptimize(model);
+    auto end = std::chrono::steady_clock::now();
+    auto _runtime =
+        double(
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+                .count()) /
+        1000;
+
+    if (status) {
+      fprintf(stderr, "Failed to optimize network.\n");
+      fflush(stderr);
+      exit(-1);
+    }
+
+    double objval = 0.0;
+    GRBgetdblattr(model, "ObjVal", &objval);
+
+    objval = objval / double(A.balance());
+
+    double iters = 0.0;
+    GRBgetdblattr(model, "IterCount", &iters);
+    _iterations = iters;
+
+    if (model != NULL) GRBfreemodel(model);
+
+    if (env != NULL) GRBfreeenv(env);
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+    _num_arcs = m;
+
+    DOT::logger.info(
+        "BIP-GUR%d %s it %d UB %.6f runtime %.4f simplex %.4f "
+        "num_arcs %d",
+        method, msg.c_str(), (int)_iterations, objval, _all, _runtime,
+        (int)_num_arcs);
+
+    return _all;
+  }
+
+  double bipartiteColgen(const Histogram2D &A, const Histogram2D &B,
+                         const std::string &msg) {
     auto start_t = std::chrono::steady_clock::now();
 
     int n = A.getN();
@@ -677,10 +799,25 @@ class Solver {
 
     int N = 2 * n * n;
     vector<int> pi(N, 0);
+    pi.shrink_to_fit();
+
+    int N2 = n * n;
+    vector<int> X(N2, 0);
+    vector<int> I(N2, 0);
+    vector<int> J(N2, 0);
+    X.shrink_to_fit();
+    I.shrink_to_fit();
+    J.shrink_to_fit();
 
     Vars vars(n * n);
     for (int i = 0; i < n; ++i)
-      for (int j = 0; j < n; ++j) vars[ID(i, j)].a = ID(i, j);
+      for (int j = 0; j < n; ++j) {
+        auto idx = ID(i, j);
+        X[idx] = i * i + j * j;
+        I[idx] = i;
+        J[idx] = j;
+        vars[idx].a = idx;
+      }
 
     Vars vnew;
     vnew.reserve(n * n);
@@ -706,7 +843,7 @@ class Solver {
       // Take the dual values
       for (int j = 0; j < N; ++j) pi[j] = -simplex.potential(j);
 
-        // Solve separation problem:
+        // Solve separation problem
 #pragma omp parallel for collapse(2)
       for (int i = 0; i < n; ++i)
         for (int j = 0; j < n; ++j) {
@@ -715,16 +852,23 @@ class Solver {
           int best_n = 0;  // best second node
           int h = ID(i, j);
 
-          for (int v = 0; v < n; ++v)
+          // i^2 + j^2 + w^2 + v^2 - 2*i*v - 2*w*j
+          int tmp = i * i + j * j - pi[h];
+          for (int v = 0; v < n; ++v) {
+            int tmp0 = tmp + v * v - 2 * i * v;
             for (int w = 0; w < n; ++w) {
-              int c_vw = (i - v) * (i - v) + (w - j) * (w - j);
-              int violation = c_vw - pi[h] + pi[n * n + ID(v, w)];
+              // int c_vw = (i - v) * (i - v) + (w - j) * (w - j);
+              //   ==>  i^2 + j^2 + w^2 + v^2 - 2*i*v - 2*w*j
+              int c_vw = tmp0 + w * w - 2 * w * j;
+              // int violation = c_vw - pi[h] + pi[n2 + ID(v, w)];
+              int violation = c_vw + pi[N2 + ID(v, w)];
               if (violation < best_v) {
                 best_v = violation;
-                best_c = c_vw;
-                best_n = n * n + ID(v, w);
+                best_c = c_vw + pi[h];
+                best_n = N2 + ID(v, w);
               }
             }
+          }
 
           // Store most violated cuts for element i
           vars[h].b = best_n;
@@ -763,19 +907,112 @@ class Solver {
     double fobj = double(simplex.totalCost()) / A.balance();
 
     // Upper bound on the missed mass
-    PRINT(
+    DOT::logger.info(
         "MYCOLGEN %s it %d LB %.6f runtime %.4f simplex %.4f "
-        "num_arcs %d\n",
+        "num_arcs %d",
         msg.c_str(), (int)_iterations, fobj, _all, _runtime, (int)_num_arcs);
 
     return _all;
   }
 
+  double bipartiteLemon(const Histogram2D &A, const Histogram2D &B,
+                        const std::string &msg = "") {
+    auto start_t = std::chrono::steady_clock::now();
+
+    int n = A.getN();
+
+    using namespace lemon;
+    typedef lemon::ListDigraph Graph;
+    Graph g;
+
+    auto ID = [&n](int x, int y) { return x * n + y; };
+
+    int d = n * n;
+
+    // add d nodes for each histrogam (d+1) source, (d+2) target
+    std::vector<Graph::Node> nodes_A;
+    nodes_A.reserve(d);
+    // add first d source nodes for first partition
+    for (size_t i = 0; i < d; ++i) nodes_A.emplace_back(g.addNode());
+
+    std::vector<Graph::Node> nodes_B;
+    nodes_B.reserve(d);
+    // add first d source nodes for second partition
+    for (size_t i = 0; i < d; ++i) nodes_B.emplace_back(g.addNode());
+
+    // Add arcs for complete bipartite graph
+    std::vector<Graph::Arc> arcs;
+    arcs.reserve(d * d);
+    std::vector<int64_t> arcs_costs;
+    arcs_costs.reserve(d * d);
+
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) {
+        for (int v = 0; v < n; ++v)
+          for (int w = 0; w < n; ++w) {
+            arcs.emplace_back(g.addArc(nodes_A[ID(i, j)], nodes_B[ID(v, w)]));
+            arcs_costs.emplace_back(pow((i - v), 2) + pow((j - w), 2));
+          }
+      }
+
+    // lower and upper bounds, cost
+    ListDigraph::ArcMap<int64_t> l_i(g), u_i(g);
+    ListDigraph::ArcMap<int64_t> c_i(g);
+
+    // FLow balance
+    ListDigraph::NodeMap<int64_t> b_i(g);
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) {
+        b_i[nodes_A[ID(i, j)]] = +A.get(i, j);
+        b_i[nodes_B[ID(i, j)]] = -B.get(i, j);
+      }
+
+    // Add all edges
+    for (size_t i = 0, i_max = arcs.size(); i < i_max; ++i) {
+      const auto &a = arcs[i];
+      l_i[a] = 0;
+      u_i[a] = std::numeric_limits<int64_t>::max() - 1;
+      c_i[a] = arcs_costs[i];
+    }
+
+    // Build the graph for min cost flow
+    lemon::NetworkSimplex<Graph, int64_t, int64_t> simplex(g);
+
+    // set lower/upper bounds, cost
+    simplex.lowerMap(l_i).upperMap(u_i).costMap(c_i).supplyMap(b_i);
+
+    NetworkSimplex<Graph, int64_t, int64_t>::ProblemType ret = simplex.run();
+
+    switch (ret) {
+      case NetworkSimplex<Graph>::INFEASIBLE:
+        fprintf(stdout, "INFEASIBLE");
+        break;
+      case NetworkSimplex<Graph>::UNBOUNDED:
+        fprintf(stdout, "UNBOUNDED");
+        break;
+    }
+
+    auto end_t = std::chrono::steady_clock::now();
+    auto _all = double(std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_t - start_t)
+                           .count()) /
+                1000;
+
+    double fobj = double(simplex.totalCost()) / A.balance();
+
+    DOT::logger.info(
+        "BIP-LEMO %s it %d UB %.6f runtime %.4f simplex %.4f "
+        "num_arcs %d",
+        msg.c_str(), (int)_iterations, fobj, _all, _runtime, (int)_num_arcs);
+
+    return fobj;
+  }
+
   //--------------------------------------------------------------------------
   void init_coprimes(int L, int N) {
-    // La distanza la normalizzo in modo che la distanza massima sia paria  1.0
-    // e poi la riscalo all'intero più vicino dopo aver moltiplicato per un
-    // fattore di scala
+    // La distanza la normalizzo in modo che la distanza massima sia
+    // paria  1.0 e poi la riscalo all'intero più vicino dopo aver
+    // moltiplicato per un fattore di scala
 
     double Dmax = 1;
 
@@ -989,7 +1226,8 @@ class Solver {
         //  if (viol > 1) {
         //    viol = viol >> 1;
         //    // double tt =
-        //    // double(std::chrono::duration_cast<std::chrono::milliseconds>(
+        //    //
+        //    double(std::chrono::duration_cast<std::chrono::milliseconds>(
         //    //               std::chrono::steady_clock::now() - start_t)
         //    //               .count()) /
         //    //    1000;
@@ -1313,7 +1551,8 @@ class Solver {
 
       int _iterations = CPXNETgetitcnt(env, net);
 
-      /* Free up the problem as allocated by CPXNETcreateprob, if necessary */
+      /* Free up the problem as allocated by CPXNETcreateprob, if necessary
+       */
       if (net != NULL) {
         status = CPXNETfreeprob(env, &net);
         if (status) {

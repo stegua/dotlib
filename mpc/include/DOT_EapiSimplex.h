@@ -272,6 +272,8 @@ class EapiSimplex {
     int ART_COST = 0;
     if (tmp_ART_COST > std::numeric_limits<int>::max())
       ART_COST = (std::numeric_limits<int>::max)() / 2 + 1;
+    else
+      ART_COST = tmp_ART_COST;
 
     // Set data for the artificial root node
     root = N;
