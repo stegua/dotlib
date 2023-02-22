@@ -61,5 +61,11 @@
     <ClInclude Include="..\..\..\include\DOT_SolverTripartite.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\DOT_SolverW1.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\stb_image.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

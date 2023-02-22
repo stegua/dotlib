@@ -166,8 +166,10 @@
     <ClInclude Include="..\..\..\include\DOT_NetSimplexUnit.h" />
     <ClInclude Include="..\..\..\include\DOT_Solver.h" />
     <ClInclude Include="..\..\..\include\DOT_SolverTripartite.h" />
+    <ClInclude Include="..\..\..\include\DOT_SolverW1.h" />
     <ClInclude Include="..\..\..\include\DOT_Tripartite.h" />
     <ClInclude Include="..\..\..\include\network_simplex.h" />
+    <ClInclude Include="..\..\..\include\stb_image.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

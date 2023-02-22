@@ -10,6 +10,12 @@
 
 #include <DOT_Commons.h>
 
+// For reading PNR and JPEG images
+#include <stdio.h>
+#include <stdlib.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 namespace DOT {
 
 class Histogram2D {
@@ -25,6 +31,35 @@ class Histogram2D {
   Histogram2D(int _n) : n(_n) { data.resize(_n * _n, 0); }
 
   // parse data from file
+  void parsePNG(const std::string& filename, const int offset = 1) {
+    int width, height, channels;
+    unsigned char* img =
+        stbi_load(filename.c_str(), &width, &height, &channels, 0);
+
+    if (img == NULL) {
+      fprintf(stdout, "FATAL ERROR: Cannot open file %s.\n", filename.c_str());
+      exit(EXIT_FAILURE);
+    }
+
+    unsigned char* p = img;
+    width = width / offset;
+    height = height / offset;
+    n = width;
+    fprintf(stdout, "size: %d\n", n);
+    data.reserve(width * height);
+
+    for (int i = 0; i < width; ++i)
+      for (int j = 0; j < width; ++j, p += offset * channels) {
+        unsigned char v = *p;
+        data.push_back(static_cast<int>(v));
+      }
+
+    data.shrink_to_fit();
+    fprintf(stdout, "all: %d, sum: %d\n", (int)data.size(), balance());
+
+    stbi_image_free(img);
+  }
+
   void parse(const std::string& filename, const char sep = ',') {
     std::ifstream in_file(filename);
 
@@ -56,6 +91,7 @@ class Histogram2D {
 
     // Use as few memory as possible
     data.shrink_to_fit();
+    fprintf(stdout, "all: %d, sum: %d\n", (int)data.size(), balance());
 
     in_file.close();
   }

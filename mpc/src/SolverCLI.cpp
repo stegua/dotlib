@@ -17,6 +17,7 @@
 #include "DOT_NetSimplex.h"
 #include "DOT_Solver.h"
 #include "DOT_SolverTripartite.h"
+#include "DOT_SolverW1.h"
 #include "DOT_Tripartite.h"
 
 // Zeta block for coordinates vector (CUDA
@@ -785,7 +786,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Test tripartite
-  if (true) {
+  if (false) {
     std::string SEP = "\\";
 
     std::string base =
@@ -793,18 +794,22 @@ int main(int argc, char *argv[]) {
         "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
 
     std::vector<std::string> dirs = {
-        "ClassicImages", "Shapes",           "WhiteNoise", "CauchyDensity",
-        "GRFmoderate",   "MicroscopyImages", "GRFrough",   "GRFsmooth",
-        "LogGRF",        "LogitGRF"};
+        "CauchyDensity",
+        //"ClassicImages", "Shapes",           "WhiteNoise", "CauchyDensity",
+        //"GRFmoderate",   "MicroscopyImages", "GRFrough",   "GRFsmooth",
+        //"LogGRF",        "LogitGRF"
+    };
 
     std::vector<std::string> Fs = {
-        "1001.csv", "1002.csv", "1003.csv", "1004.csv", "1005.csv",
-        "1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"};
+        "1001.csv", "1002.csv",
+        //"1003.csv", "1004.csv", "1005.csv",
+        //"1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"
+    };
 
-    std::vector<std::string> Ss = {"32", "64"};
+    std::vector<std::string> Ss = {"32"};
     // , "256", "512"
 
-    DOT::logger.setFileStream("all.tripartite.log");
+    DOT::logger.setFileStream("all.tripartite.128.log");
 
     for (const auto &S : Ss) {
       for (const auto &dtype : dirs) {
@@ -872,6 +877,99 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Test W1
+  if (false) {
+    std::string SEP = "\\";
+
+    std::string base =
+        "C:\\Users\\Gualandi\\Google "
+        "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Data\\";
+
+    std::vector<std::string> dirs = {
+        "CauchyDensity"
+        //"ClassicImages",
+        //"Shapes",           "WhiteNoise", "CauchyDensity",
+        //"GRFmoderate",   "MicroscopyImages", "GRFrough",   "GRFsmooth",
+        //"LogGRF",        "LogitGRF"
+    };
+
+    std::vector<std::string> Fs = {
+        "1001.csv", "1002.csv",  //"1003.csv", "1004.csv", "1005.csv",
+        //"1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"
+    };
+
+    std::vector<std::string> Ss = {"32"};
+    // , "256", "512"
+
+    // DOT::logger.setFileStream("all.coprimes.32.log");
+
+    DOT::SolverW1 minflow;
+
+    for (const auto &S : Ss) {
+      minflow.init_coprimes(31, 32);
+      for (const auto &dtype : dirs) {
+        std::array<double, 8> stat = {0, 0, 0, 0};
+        std::array<double, 4> eapi = {0, 0, 0, 0};
+        std::array<double, 4> eati = {0, 0, 0, 0};
+        for (const auto &f11 : Fs) {
+          for (const auto &f22 : Fs)
+            if (f11 < f22) {
+              DOT::Histogram2D a;
+              DOT::Histogram2D b;
+
+              std::string f1 = "data" + S + "_" + f11;
+              std::string f2 = "data" + S + "_" + f22;
+
+              a.parse(base + dtype + SEP + f1);
+              b.parse(base + dtype + SEP + f2);
+
+              std::string msg = dtype + " " + f11 + " " + f22;
+
+              // stat[0] += minflow.gurobi(a, b, msg, 1);
+              // stat[1] += minflow.gurobi(a, b, msg, 2);
+              // stat[2] += minflow.gurobi(a, b, msg, 3);
+
+              // stat[3] += minflow.cplex(a, b, msg);
+              // stat[4] += minflow.lemon(a, b, msg);
+
+              std::array<double, 4> times = minflow.eati(a, b, msg);
+              eati[0] += times[0];
+              eati[1] += times[1];
+              eati[2] += times[2];
+              eati[3] += times[3];
+              stat[5] += times[0];
+
+              times = minflow.eapi(a, b, msg);
+              eapi[0] += times[0];
+              eapi[1] += times[1];
+              eapi[2] += times[2];
+              eapi[3] += times[3];
+              stat[6] += times[0];
+
+              // stat[7] += minflow.colgen(a, b, msg);
+
+              DOT::logger.flush();
+            }
+        }
+        DOT::logger.info(
+            "N: %s, %s, GrbDual: %.4f\tGrbBarr: %.4f\tGrbNetS: %.4f\tCplexNS: "
+            "%.4f\tLemon: %.4f\tEati: %.4f\tEapi: %.4f\tColegn: %.4f",
+            S.c_str(), dtype.c_str(), stat[0], stat[1], stat[2], stat[3],
+            stat[4], stat[5], stat[6], stat[7]);
+
+        DOT::logger.info(
+            "N: %s, %s, Eapi: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f",
+            S.c_str(), dtype.c_str(), eapi[0], eapi[1], eapi[2], eapi[3]);
+
+        DOT::logger.info(
+            "N: %s, %s, Eati: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f",
+            S.c_str(), dtype.c_str(), eati[0], eati[1], eati[2], eati[3]);
+
+        fflush(stdout);
+      }
+    }
+  }
+
   if (false) {
     size_t samples = n * n;
     DOT::Histogram2D a(n);
@@ -902,5 +1000,128 @@ int main(int argc, char *argv[]) {
     // TODO: FIX double dist2 = solver.tripartite(a, b);
   }
 
+  // Test ONG
+  if (false) {
+    std::string SEP = "\\";
+
+    std::string base =
+        "C:\\Users\\Gualandi\\Google "
+        "Drive\\Ricerca\\DOTA\\data\\DOTmark_1.0\\Pictures\\";
+
+    std::vector<std::string> dirs = {
+        "ClassicImages",
+        //"Shapes",           "WhiteNoise", "CauchyDensity",
+        //"GRFmoderate",   "MicroscopyImages", "GRFrough",   "GRFsmooth",
+        //"LogGRF",        "LogitGRF"
+    };
+
+    std::vector<std::string> Fs = {
+        "1001.png", "1002.png",  // "1003.png", "1004.png", "1005.png",
+        //"1006.csv", "1007.csv", "1008.csv", "1009.csv", "1010.csv"
+    };
+
+    std::vector<std::string> Ss = {"32"};
+    // , "256", "512"
+
+    DOT::SolverW1 minflow;
+
+    for (const auto &S : Ss) {
+      minflow.init_coprimes(31, 32);
+      for (const auto &dtype : dirs) {
+        std::array<double, 8> stat = {0, 0, 0, 0};
+        std::array<double, 4> eapi = {0, 0, 0, 0};
+        std::array<double, 4> eati = {0, 0, 0, 0};
+        for (const auto &f11 : Fs) {
+          for (const auto &f22 : Fs)
+            if (f11 < f22) {
+              DOT::Histogram2D a;
+              DOT::Histogram2D b;
+
+              std::string f1 = "picture" + S + "_" + f11;
+              std::string f2 = "picture" + S + "_" + f22;
+
+              a.parsePNG(base + dtype + SEP + f1, 512 / std::stoi(S));
+              b.parsePNG(base + dtype + SEP + f2, 512 / std::stoi(S));
+
+              std::string msg = dtype + " " + f11 + " " + f22;
+
+              std::array<double, 4> times = minflow.eati(a, b, msg);
+              eati[0] += times[0];
+              eati[1] += times[1];
+              eati[2] += times[2];
+              eati[3] += times[3];
+              stat[5] += times[0];
+
+              times = minflow.eapi(a, b, msg);
+              eapi[0] += times[0];
+              eapi[1] += times[1];
+              eapi[2] += times[2];
+              eapi[3] += times[3];
+              stat[6] += times[0];
+
+              DOT::logger.flush();
+            }
+        }
+        DOT::logger.info(
+            "N: %s, %s, GrbDual: %.4f\tGrbBarr: %.4f\tGrbNetS: %.4f\tCplexNS: "
+            "%.4f\tLemon: %.4f\tEati: %.4f\tEapi: %.4f\tColegn: %.4f",
+            S.c_str(), dtype.c_str(), stat[0], stat[1], stat[2], stat[3],
+            stat[4], stat[5], stat[6], stat[7]);
+
+        DOT::logger.info(
+            "N: %s, %s, Eapi: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f",
+            S.c_str(), dtype.c_str(), eapi[0], eapi[1], eapi[2], eapi[3]);
+
+        DOT::logger.info(
+            "N: %s, %s, Eati: %.4f\tpricing: %.4f\tbasis: %.4f\tduals: %.4f",
+            S.c_str(), dtype.c_str(), eati[0], eati[1], eati[2], eati[3]);
+
+        fflush(stdout);
+      }
+    }
+  }
+
+  if (true) {
+    std::string SEP = "\\";
+
+    std::vector<std::string> Fs = {"ocean_day.jpg", "ocean_sunset.jpg"};
+
+    for (const auto &filename : Fs) {
+      // auto filename = Fs[0];
+
+      int width, height, channels;
+      unsigned char *img =
+          stbi_load(filename.c_str(), &width, &height, &channels, 0);
+
+      fprintf(stdout, "width: %d, height %d, channles% d\n", width, height,
+              channels);
+
+      if (img == NULL) {
+        fprintf(stdout, "FATAL ERROR: Cannot open file %s.\n",
+                filename.c_str());
+        exit(EXIT_FAILURE);
+      }
+
+      int offset = 1;
+
+      unsigned char *p = img;
+
+      vector<int> data;
+      data.reserve(width * height * channels);
+
+      for (int i = 0; i < width; ++i)
+        for (int j = 0; j < height; ++j)
+          for (int h = 0; h < channels; ++h, p += 1) {
+            unsigned char v = *p;
+            data.push_back(static_cast<int>(v));
+          }
+
+      data.shrink_to_fit();
+      fprintf(stdout, "all: %d\n", (int)data.size());
+
+      for (int i = 0; i < 30; ++i) fprintf(stdout, "%d ", data[i]);
+      stbi_image_free(img);
+    }
+  }
   return EXIT_SUCCESS;
 }
