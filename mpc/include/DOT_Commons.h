@@ -111,6 +111,19 @@ class Var {
 
 typedef std::vector<Var> Vars;
 
+class DoubleVar {
+ public:
+  int a;     // First point
+  int b;     // Second point
+  double c;  // Distance
+
+  DoubleVar() : a(0), b(0), c(-1) {}
+
+  DoubleVar(int _a, int _b, double _c) : a(_a), b(_b), c(_c) {}
+};
+
+typedef std::vector<DoubleVar> DoubleVars;
+
 class CapVar {
  public:
   int a;     // First point

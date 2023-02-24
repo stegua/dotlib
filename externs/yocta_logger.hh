@@ -31,7 +31,13 @@ std::string fmt(const std::string& format, Args... args) {
 }
 
 // Verbosity levels
-enum VerbosityLevel { LOGERROR = 0, WARN = 1, NOTE = 2, INFO = 3, DEBUG = 4 };
+enum VerbosityLevel {
+  LOGERROR = 0,
+  WARN = 1,
+  NOTE = 2,
+  INFO = 3,
+  LOGDEBUG = 4
+};
 
 class Logger {
  public:
@@ -118,12 +124,12 @@ class Logger {
 
   // DEBUG
   void debug(const std::string& format) const {
-    if (vl >= VerbosityLevel::DEBUG) dump("[DEBUG]", format);
+    if (vl >= VerbosityLevel::LOGDEBUG) dump("[DEBUG]", format);
   }
 
   template <typename... Args>
   void debug(const std::string& format, Args... args) const {
-    if (vl >= VerbosityLevel::DEBUG)
+    if (vl >= VerbosityLevel::LOGDEBUG)
       dump("[DEBUG]", fmt(format, std::forward<Args>(args)...));
   }
 

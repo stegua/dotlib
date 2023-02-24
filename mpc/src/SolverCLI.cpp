@@ -19,6 +19,7 @@
 #include "DOT_SolverTripartite.h"
 #include "DOT_SolverW1.h"
 #include "DOT_Tripartite.h"
+#include "DOT_WordMover.h"
 
 // Zeta block for coordinates vector (CUDA
 #define BLOCKSIZE 1024
@@ -1081,7 +1082,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (true) {
+  if (false) {
     std::string SEP = "\\";
 
     std::vector<std::string> Fs = {"ocean_day.jpg", "ocean_sunset.jpg"};
@@ -1123,5 +1124,32 @@ int main(int argc, char *argv[]) {
       stbi_image_free(img);
     }
   }
+
+  // Test for Word Mover Distance
+  if (true) {
+    std::string Xs =
+        "C:"
+        "\\Users\\Gualandi\\Documents\\GitHub\\dotlib\\mpc\\msvc\\NetCplex\\x64"
+        "\\Release\\X_test.bin";
+    std::string Hs =
+        "C:"
+        "\\Users\\Gualandi\\Documents\\GitHub\\dotlib\\mpc\\msvc\\NetCplex\\x64"
+        "\\Release\\H_test.bin";
+
+    DOT::WordMover WMD;
+    WMD.parseX(Xs);
+    WMD.parseH(Hs);
+    WMD.dump();
+    WMD.dumpRowX(4);
+    WMD.dumpRowH(0);
+    WMD.dumpRowH(1);
+
+    WMD.normalizeAllHistograms();
+    WMD.computeCostMatrix();
+
+    WMD.distanceNetsimplex(1, 0);
+    // WMD.distanceCplex(1, 0);
+  }
+
   return EXIT_SUCCESS;
 }
