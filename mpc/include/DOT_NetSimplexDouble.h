@@ -249,7 +249,7 @@ class NetSimplexDouble {
     // 2*n-1 nodes in a basic solution
     int max_arc_num = 0;
     if (INIT == 'F')  // Full
-      max_arc_num = _node_num + arc_num;
+      max_arc_num = _node_num * 2 + arc_num;
 
     if (INIT == 'E')  // Empty, for Column Generation
       max_arc_num = 4 * _node_num + 1;
@@ -429,8 +429,11 @@ class NetSimplexDouble {
   double totalCost() const {
     double c = 0;
     for (int e = _dummy_arc; e < _arc_num; ++e)
-      if (_source[e] != _root && _target[e] != _root) c += _flow[e] * _cost[e];
-
+      if (_source[e] != _root && _target[e] != _root) {
+        fprintf(stdout, "sol: %d %d %f %f %f\n", _source[e], _target[e],
+                _flow[e], _cost[e], _flow[e] * _cost[e]);
+        c += _flow[e] * _cost[e];
+      }
     return c;
   }
 
@@ -883,9 +886,8 @@ class NetSimplexDouble {
     while (true) {
       _iterations++;
 
-      bool stop = pricing();
-      // bool stop = pivot.findEnteringArc();
-      fprintf(stdout, "beep1");
+      // bool stop = pricing();
+      bool stop = pivot.findEnteringArc();
 
       if (!stop) break;
 
@@ -894,8 +896,6 @@ class NetSimplexDouble {
       changeFlow();
       updateTreeStructure();
       updatePotential();
-
-      fprintf(stdout, "beep");
     }
 
     auto end_t = std::chrono::steady_clock::now();

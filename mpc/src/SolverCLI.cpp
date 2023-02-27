@@ -1148,7 +1148,7 @@ int main(int argc, char *argv[]) {
     WMD.computeCostMatrix();
 
     WMD.distanceNetsimplex(1, 0);
-    // WMD.distanceCplex(1, 0);
+    WMD.distanceCplex(1, 0);
   }
 
   return EXIT_SUCCESS;

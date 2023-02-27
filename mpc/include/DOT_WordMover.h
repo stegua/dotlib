@@ -122,41 +122,42 @@ class WordMover {
     vector<int> IDtail;
     IDhead.reserve(n);
     IDtail.reserve(n);
-    vector<int> INVhead(n, 0);
-    vector<int> INVtail(n, 0);
+
     vector<double> supply;
     supply.reserve(2 * n);
     for (int i = 0; i < n; ++i)
       if (H[a * n + i] > 0.0) {
-        IDhead.push_back(supply.size());
-        INVhead[supply.size()] = i;
+        IDtail.push_back(i);
         supply.push_back(H[a * n + i]);
       }
 
-    size_t N = supply.size();
+    int N = supply.size();
     fprintf(stdout, "H1 size: %d\n", (int)N);
 
     for (int j = 0; j < n; ++j)
       if (H[b * n + j] > 0.0) {
-        IDtail.push_back(supply.size());
-        INVtail[supply.size()] = j;
+        IDhead.push_back(j);
         supply.push_back(-H[b * n + j]);  // Destinations are negative values
       }
     fprintf(stdout, "H2 size: %d\n", (int)supply.size() - N);
 
-    size_t Na = IDhead.size();
-    size_t Nb = IDtail.size();
-    size_t Nab = Na * Nb;
+    int Na = IDtail.size();
+    int Nb = IDhead.size();
+    int Nab = Na * Nb;
 
     // Build the graph for min cost flow
     NetSimplexDouble simplex('F', Na + Nb, Na * Nb);
 
-    for (size_t i = 0, i_max = Na + Nb; i < i_max; ++i)
+    for (int i = 0, i_max = Na + Nb; i < i_max; ++i) {
       simplex.addNode(i, supply[i]);
+      fprintf(stdout, "n %d %f\n", i, supply[i]);
+    }
 
-    for (size_t i = 0; i < Na; ++i)
-      for (size_t j = 0; j < Nb; ++j)
-        simplex.addArc(i, N + j, C[INVhead[i] * Nb + INVtail[j]]);
+    for (int i = 0; i < Na; ++i)
+      for (int j = 0; j < Nb; ++j) {
+        simplex.addArc(i, Na + j, C[IDtail[i] * n + IDhead[j]]);
+        fprintf(stdout, "%d %d %f\n", i, Na + j, C[IDtail[i] * n + IDhead[j]]);
+      }
 
     // Set the parameters
     // simplex.setTimelimit(timelimit);
@@ -376,6 +377,7 @@ class WordMover {
           tail.push_back(IDhead[i]);
           head.push_back(IDtail[j]);
           obj.push_back(C[i * n + j]);
+          fprintf(stdout, "%d %d %f\n", IDhead[i], IDtail[j], C[i * n + j]);
         }
 
     // Build Network instance
