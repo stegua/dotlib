@@ -225,10 +225,10 @@ class NetSimplexDouble {
                 : MAX),
         _runtime(0.0) {
     // Check the number types
-    if (!std::numeric_limits<int>::is_signed)
+    if (!std::numeric_limits<double>::is_signed)
       throw std::runtime_error(
           "The flow type of NetworkSimplex must be signed");
-    if (!std::numeric_limits<int>::is_signed)
+    if (!std::numeric_limits<double>::is_signed)
       throw std::runtime_error(
           "The cost type of NetworkSimplex must be signed");
 
@@ -248,8 +248,8 @@ class NetSimplexDouble {
     // 2*n arcs from nodes to root and from root to node;
     // 2*n-1 nodes in a basic solution
     int max_arc_num = 0;
-    if (INIT == 'F')  // Full
-      max_arc_num = _node_num * 2 + arc_num;
+    if (INIT == 'F')                              // Full
+      max_arc_num = 2 * _node_num + arc_num + 1;  // Perchè?
 
     if (INIT == 'E')  // Empty, for Column Generation
       max_arc_num = 4 * _node_num + 1;
@@ -359,7 +359,7 @@ class NetSimplexDouble {
     _target[_dummy_arc + idx] = b;
     _cost[_dummy_arc + idx] = c;
 
-    _flow[_dummy_arc + idx] = 0;
+    _flow[_dummy_arc + idx] = 0.0;
     _state[_dummy_arc + idx] = STATE_LOWER;
 
     _arc_num++;
@@ -860,7 +860,7 @@ class NetSimplexDouble {
     double sigma = _pi[v_in] - _pi[u_in] - _pred_dir[u_in] * _cost[in_arc];
     int end = _thread[_last_succ[u_in]];
 
-    if (sigma != 0)
+    if (sigma != 0.0)
       for (int u = u_in; u != end; u = _thread[u]) _pi[u] += sigma;
   }
 

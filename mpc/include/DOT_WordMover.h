@@ -160,9 +160,9 @@ class WordMover {
       }
 
     // Set the parameters
-    // simplex.setTimelimit(timelimit);
+    simplex.setTimelimit(1000);
     // simplex.setVerbosity(verbosity);
-    // simplex.setOptTolerance(opt_tolerance);
+    simplex.setOptTolerance(-1e-04);
 
     auto _status = simplex.run();
 
@@ -353,7 +353,7 @@ class WordMover {
     supply.reserve(2 * n);
     for (int i = 0; i < n; ++i)
       if (H[a * n + i] > 0.0) {
-        IDhead[i] = supply.size();
+        IDtail[i] = supply.size();
         supply.push_back(H[a * n + i]);
       }
 
@@ -362,7 +362,7 @@ class WordMover {
 
     for (int j = 0; j < n; ++j)
       if (H[b * n + j] > 0.0) {
-        IDtail[j] = supply.size();
+        IDhead[j] = supply.size();
         supply.push_back(-H[b * n + j]);  // Destinations are negative values
       }
     fprintf(stdout, "H2 size: %d\n", (int)supply.size() - N);
@@ -374,10 +374,10 @@ class WordMover {
     for (int i = 0; i < n; ++i)
       for (int j = 0; j < n; ++j)
         if (H[a * n + i] > 0.0 && H[b * n + j] > 0.0) {
-          tail.push_back(IDhead[i]);
-          head.push_back(IDtail[j]);
+          tail.push_back(IDtail[i]);
+          head.push_back(IDhead[j]);
           obj.push_back(C[i * n + j]);
-          fprintf(stdout, "%d %d %f\n", IDhead[i], IDtail[j], C[i * n + j]);
+          fprintf(stdout, "%d %d %f\n", IDtail[i], IDhead[j], C[i * n + j]);
         }
 
     // Build Network instance
@@ -411,6 +411,12 @@ class WordMover {
     double objval = 0.0;
     CPXNETgetobjval(env, net, &objval);
 
+    vector<double> x(obj.size(), 0.0);
+    status =
+        CPXNETsolution(env, net, &solstat, &objval, &x[0], NULL, NULL, NULL);
+
+    for (size_t i = 0; i < x.size(); ++i)
+      fprintf(stdout, "%d %d %f %f\n", tail[i], head[i], x[i], obj[i]);
     int _iterations = CPXNETgetitcnt(env, net);
 
     /* Free up the problem as allocated by CPXNETcreateprob, if necessary */
